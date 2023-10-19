@@ -20,17 +20,32 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
       required: true,
     },
     location: {
-      type: String,
-      required: true,
+      addressType: {
+        type: String,
+        required: true,
+      },
+      displayName: {
+        type: String,
+        required: true,
+      },
+      name: {
+        type: String,
+        required: true,
+      },
+      lat: {
+        type: String,
+        required: true,
+      },
+      lon: {
+        type: String,
+        required: true,
+      },
     },
     price: {
       type: Number,
       required: true,
     },
-    photo: {
-      type: String,
-      required: true,
-    },
+    images: [{ type: String }],
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",

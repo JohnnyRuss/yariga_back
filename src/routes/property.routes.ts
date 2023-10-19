@@ -1,13 +1,18 @@
 import { Router as ExpressRouter } from "express";
 import * as propertyController from "../controllers/property.controller";
+import { checkAuth } from "../middlewares";
 
 const Router = ExpressRouter();
 
 Router.route("/")
-  .post(propertyController.createProperty)
+  .post(
+    checkAuth,
+    propertyController.fileUpload,
+    propertyController.createProperty
+  )
   .get(propertyController.getAllProperties);
 
-Router.route("/propertyId")
+Router.route("/:propertyId")
   .put(propertyController.updateProperty)
   .delete(propertyController.deleteProperty)
   .get(propertyController.getProperty);

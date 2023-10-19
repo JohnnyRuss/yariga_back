@@ -6,7 +6,7 @@ const Router = ExpressRouter();
 
 Router.route("/login/google").post(authController.googleLogin);
 
-Router.route("/refresh").post(checkAuth, authController.refresh);
+Router.route("/refresh").post(authController.refresh);
 
 Router.route("/logout").post(checkAuth, authController.logout);
 

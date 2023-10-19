@@ -1,13 +1,25 @@
 import mongoose from "mongoose";
+
 import { Async, AppError } from "../lib";
 import { Property, User } from "../models";
 
+import {
+  CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET,
+} from "../config/env";
+import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+
 cloudinary.config({
-  cloud_name: "",
-  api_key: "",
-  api_secret: "",
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
 });
+
+export const fileUpload = multer({
+  storage: multer.memoryStorage(),
+}).array("new_images[]", 6);
 
 export const createProperty = Async(async (req, res, next) => {
   const body = req.body;
@@ -20,19 +32,48 @@ export const createProperty = Async(async (req, res, next) => {
 
   if (!user) return next(new AppError(404, "user does not exists"));
 
-  const imgUrl = await cloudinary.uploader.upload(body.photo);
+  let imgUrls: string[] = [];
 
-  const newProperty = await Property.create({
-    ...body,
-    photo: imgUrl,
-  });
+  const files: Express.Multer.File[] =
+    req.files as unknown as Express.Multer.File[];
+
+  if (files[0])
+    await Promise.all(
+      files.map(async (file) => {
+        try {
+          const base64 = Buffer.from(file.buffer).toString("base64");
+          let dataURI = `data:${file.mimetype};base64,${base64}`;
+
+          const { secure_url } = await cloudinary.uploader.upload(dataURI, {
+            resource_type: "image",
+            folder: "properties",
+            format: "webp",
+          });
+
+          imgUrls.push(secure_url);
+        } catch (error) {
+          return next(new AppError(404, "Ocurred error during file upload"));
+        }
+      })
+    );
+
+  const [newProperty] = await Property.create(
+    [
+      {
+        ...body,
+        images: imgUrls,
+        owner: currentUser._id.toString(),
+      },
+    ],
+    { session, new: true }
+  );
 
   user.properties.push(newProperty._id);
   await user.save({ session });
 
   await session.commitTransaction();
 
-  res.status(201).json(newProperty);
+  res.status(201).json("Property is created");
 });
 
 export const updateProperty = Async(async (req, res, next) => {

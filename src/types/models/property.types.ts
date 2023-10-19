@@ -5,9 +5,15 @@ export interface PropertyT extends Document {
   title: string;
   description: string;
   propertyType: string;
-  location: string;
+  location: {
+    addressType: string;
+    displayName: string;
+    name: string;
+    lat: string;
+    lon: string;
+  };
   price: number;
-  photo: string;
+  images: Array<string>;
   owner: Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
