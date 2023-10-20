@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
 
 import { Async, AppError } from "../lib";
-import { Property, User } from "../models";
+import {
+  Property,
+  User,
+  PropertyFeatures,
+  PropertyTypes,
+  RoomTypes,
+  PropertyStatus,
+} from "../models";
 
 import {
   CLOUDINARY_CLOUD_NAME,
@@ -20,6 +27,25 @@ cloudinary.config({
 export const fileUpload = multer({
   storage: multer.memoryStorage(),
 }).array("new_images[]", 6);
+
+export const getPropertyFormSuggestion = Async(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const propertyFeatures = await PropertyFeatures.find().session(session);
+  const propertyTypes = await PropertyTypes.find().session(session);
+  const roomTypes = await RoomTypes.find().session(session);
+  const propertyStatuses = await PropertyStatus.find().session(session);
+
+  session.commitTransaction();
+
+  res.status(200).json({
+    propertyFeatures,
+    propertyTypes,
+    roomTypes,
+    propertyStatuses,
+  });
+});
 
 export const createProperty = Async(async (req, res, next) => {
   const body = req.body;
@@ -89,9 +115,28 @@ export const getProperty = Async(async (req, res, next) => {
 });
 
 export const getAllProperties = Async(async (req, res, next) => {
-  res.status(200).json("");
+  const properties = await Property.find().populate({
+    path: "owner",
+    select: "-properties",
+  });
+
+  res.status(200).json(properties);
 });
 
 export const getUserProperties = Async(async (req, res, next) => {
   res.status(200).json("");
 });
+
+const PROPERTY_FEATURES = [
+  {
+    label: "",
+    value: "",
+    icon: "",
+  },
+];
+
+async function createFeatures() {
+  await PropertyFeatures.insertMany(PROPERTY_FEATURES);
+}
+
+// createFeatures();

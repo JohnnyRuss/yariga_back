@@ -12,6 +12,11 @@ Router.route("/")
   )
   .get(propertyController.getAllProperties);
 
+Router.route("/suggestions").get(
+  checkAuth,
+  propertyController.getPropertyFormSuggestion
+);
+
 Router.route("/:propertyId")
   .put(propertyController.updateProperty)
   .delete(propertyController.deleteProperty)
