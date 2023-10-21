@@ -7,20 +7,63 @@ import { model, Schema } from "mongoose";
 
 const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
   {
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
     title: {
       type: String,
       required: true,
     },
-    description: {
+
+    propertyStatus: {
       type: String,
+      enum: ["RENT", "SALE"],
+    },
+
+    price: {
+      type: Number,
       required: true,
     },
+
     propertyType: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "PropertyType",
       required: true,
     },
+
+    area: {
+      type: Number,
+      required: true,
+    },
+
+    rooms: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "RoomTypes",
+      },
+    ],
+
+    features: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "RoomType",
+      },
+    ],
+
+    bedroomsAmount: {
+      type: Number,
+      required: true,
+    },
+
+    bathroomsAmount: {
+      type: Number,
+    },
+
     location: {
-      addressType: {
+      name: {
         type: String,
         required: true,
       },
@@ -28,7 +71,18 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
         type: String,
         required: true,
       },
-      name: {
+      city: {
+        type: String,
+        required: true,
+      },
+      country: {
+        type: String,
+        required: true,
+      },
+      state: {
+        type: String,
+      },
+      addressType: {
         type: String,
         required: true,
       },
@@ -41,16 +95,13 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
         required: true,
       },
     },
-    price: {
-      type: Number,
+
+    description: {
+      type: String,
       required: true,
     },
+
     images: [{ type: String }],
-    owner: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
   },
   { timestamps: true }
 );

@@ -1,8 +1,8 @@
 import { Schema, model } from "mongoose";
 
 const PropertyFeatureSchema = new Schema({
-  label: String,
-  value: String,
+  label: { type: String, unique: true },
+  value: { type: String, unique: true },
   icon: String,
 });
 

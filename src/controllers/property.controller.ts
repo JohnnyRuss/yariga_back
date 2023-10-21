@@ -4,9 +4,9 @@ import { Async, AppError } from "../lib";
 import {
   Property,
   User,
-  PropertyFeatures,
-  PropertyTypes,
-  RoomTypes,
+  PropertyFeature,
+  PropertyType,
+  RoomType,
   PropertyStatus,
 } from "../models";
 
@@ -26,15 +26,15 @@ cloudinary.config({
 
 export const fileUpload = multer({
   storage: multer.memoryStorage(),
-}).array("new_images[]", 6);
+}).array("new_images[]", 14);
 
 export const getPropertyFormSuggestion = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const propertyFeatures = await PropertyFeatures.find().session(session);
-  const propertyTypes = await PropertyTypes.find().session(session);
-  const roomTypes = await RoomTypes.find().session(session);
+  const propertyFeatures = await PropertyFeature.find().session(session);
+  const propertyTypes = await PropertyType.find().session(session);
+  const roomTypes = await RoomType.find().session(session);
   const propertyStatuses = await PropertyStatus.find().session(session);
 
   session.commitTransaction();
@@ -136,7 +136,7 @@ const PROPERTY_FEATURES = [
 ];
 
 async function createFeatures() {
-  await PropertyFeatures.insertMany(PROPERTY_FEATURES);
+  await PropertyFeature.insertMany(PROPERTY_FEATURES);
 }
 
 // createFeatures();
