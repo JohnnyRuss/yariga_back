@@ -76,6 +76,25 @@ export const getPropertyFilters = Async(async (req, res, next) => {
     .distinct("location.state")
     .session(session);
 
+  const sort = [
+    {
+      label: "Price (Asc)",
+      value: "price",
+    },
+    {
+      label: "Price (Desc)",
+      value: "-price",
+    },
+    {
+      label: "Publish Date (Asc)",
+      value: "createdAt",
+    },
+    {
+      label: "Publish Date (Desc)",
+      value: "-createdAt",
+    },
+  ];
+
   session.commitTransaction();
 
   res.status(200).json({
@@ -86,6 +105,7 @@ export const getPropertyFilters = Async(async (req, res, next) => {
     countries,
     cities,
     states,
+    sort,
   });
 });
 
