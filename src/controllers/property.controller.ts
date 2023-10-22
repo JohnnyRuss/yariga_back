@@ -32,10 +32,16 @@ export const getPropertyFormSuggestion = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const propertyFeatures = await PropertyFeature.find().session(session);
-  const propertyTypes = await PropertyType.find().session(session);
-  const roomTypes = await RoomType.find().session(session);
-  const propertyStatuses = await PropertyStatus.find().session(session);
+  const roomTypes = await RoomType.find().select("-__v").session(session);
+  const propertyFeatures = await PropertyFeature.find()
+    .select("-__v -icon")
+    .session(session);
+  const propertyTypes = await PropertyType.find()
+    .select("-__v")
+    .session(session);
+  const propertyStatuses = await PropertyStatus.find()
+    .select("-__v")
+    .session(session);
 
   session.commitTransaction();
 
@@ -44,6 +50,42 @@ export const getPropertyFormSuggestion = Async(async (req, res, next) => {
     propertyTypes,
     roomTypes,
     propertyStatuses,
+  });
+});
+
+export const getPropertyFilters = Async(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const roomTypes = await RoomType.find().select("-__v").session(session);
+  const statuses = await PropertyStatus.find().select("-__v").session(session);
+  const propertyFeatures = await PropertyFeature.find()
+    .select("-__v -icon")
+    .session(session);
+  const propertyTypes = await PropertyType.find()
+    .select("-__v")
+    .session(session);
+
+  const countries = await Property.find()
+    .distinct("location.country")
+    .session(session);
+  const cities = await Property.find()
+    .distinct("location.city")
+    .session(session);
+  const states = await Property.find()
+    .distinct("location.state")
+    .session(session);
+
+  session.commitTransaction();
+
+  res.status(200).json({
+    statuses,
+    propertyTypes,
+    roomTypes,
+    propertyFeatures,
+    countries,
+    cities,
+    states,
   });
 });
 
@@ -115,10 +157,15 @@ export const getProperty = Async(async (req, res, next) => {
 });
 
 export const getAllProperties = Async(async (req, res, next) => {
-  const properties = await Property.find().populate({
-    path: "owner",
-    select: "-properties",
-  });
+  const properties = await Property.find()
+    .select(
+      "images title price propertyStatus propertyType location owner area bedroomsAmount bathroomsAmount"
+    )
+    .populate({
+      path: "owner",
+      select: "-properties",
+    })
+    .populate({ path: "propertyType" });
 
   res.status(200).json(properties);
 });

@@ -17,6 +17,8 @@ Router.route("/suggestions").get(
   propertyController.getPropertyFormSuggestion
 );
 
+Router.route("/filter").get(propertyController.getPropertyFilters);
+
 Router.route("/:propertyId")
   .put(propertyController.updateProperty)
   .delete(propertyController.deleteProperty)
