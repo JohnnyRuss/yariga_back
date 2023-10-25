@@ -173,7 +173,17 @@ export const deleteProperty = Async(async (req, res, next) => {
 });
 
 export const getProperty = Async(async (req, res, next) => {
-  res.status(200).json("");
+  const { propertyId } = req.params;
+
+  const property = await Property.findById(propertyId)
+    .populate({ path: "owner" })
+    .populate({ path: "propertyType" })
+    .populate({ path: "rooms" })
+    .populate({ path: "features" });
+
+  if (!property) return next(new AppError(404, "Property does not exists"));
+
+  res.status(200).json(property);
 });
 
 export const getAllProperties = Async(async (req, res, next) => {

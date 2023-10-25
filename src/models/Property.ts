@@ -42,14 +42,14 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
     rooms: [
       {
         type: Schema.Types.ObjectId,
-        ref: "RoomTypes",
+        ref: "RoomType",
       },
     ],
 
     features: [
       {
         type: Schema.Types.ObjectId,
-        ref: "RoomType",
+        ref: "PropertyFeature",
       },
     ],
 
