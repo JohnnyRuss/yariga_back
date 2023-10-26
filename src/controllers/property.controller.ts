@@ -172,6 +172,12 @@ export const deleteProperty = Async(async (req, res, next) => {
   res.status(204).json("");
 });
 
+export const getPropertyRoomTypes = Async(async (req, res, next) => {
+  const rooms = await RoomType.find();
+
+  res.status(200).json(rooms);
+});
+
 export const getProperty = Async(async (req, res, next) => {
   const { propertyId } = req.params;
 
