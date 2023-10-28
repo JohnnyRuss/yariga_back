@@ -10,6 +10,7 @@ import errorController from "./controllers/errorController";
 import authRoutes from "./routes/auth.routes";
 import propertyRoutes from "./routes/property.routes";
 import userRoutes from "./routes/user.routes";
+import agentRoutes from "./routes/agent.routes";
 
 const App = express();
 
@@ -25,6 +26,7 @@ NODE_MODE === "DEV" && App.use(morgan("dev"));
 App.use("/api/v1/auth", authRoutes);
 App.use("/api/v1/users", userRoutes);
 App.use("/api/v1/properties", propertyRoutes);
+App.use("/api/v1/agents", agentRoutes);
 
 App.all("*", (req: Request, _, next: NextFunction) => {
   next(new AppError(404, `can't find ${req.originalUrl} on this server`));
