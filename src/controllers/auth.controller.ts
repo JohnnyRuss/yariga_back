@@ -29,7 +29,8 @@ export const googleLogin = Async(async (req, res, next) => {
     email: user.email,
     username: user.username,
     avatar: user.avatar,
-    properties: user.properties,
+    phone: user.phone,
+    location: user.location,
   };
 
   res.status(201).json({ user: userData, accessToken });
@@ -63,7 +64,8 @@ export const signUp = Async(async (req, res, next) => {
     email: newUser.email,
     username: newUser.username,
     avatar: newUser.avatar,
-    properties: newUser.properties,
+    phone: newUser.phone,
+    location: newUser.location,
   };
 
   res.status(201).json({ user: userData, accessToken });
@@ -97,7 +99,8 @@ export const signIn = Async(async (req, res, next) => {
     email: user.email,
     username: user.username,
     avatar: user.avatar,
-    properties: user.properties,
+    phone: user.phone,
+    location: user.location,
   };
 
   res.status(201).json({ user: userData, accessToken });

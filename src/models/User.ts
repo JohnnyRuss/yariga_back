@@ -16,13 +16,28 @@ const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>({
     unique: true,
   },
 
-  password: {
-    type: String,
-    select: false,
-  },
-
   avatar: {
     type: String,
+  },
+
+  phone: {
+    type: String,
+    default: "",
+  },
+
+  location: {
+    type: {
+      name: String,
+      displayName: String,
+      city: String,
+      country: String,
+      state: String,
+      addressType: String,
+      postcode: String,
+      lat: String,
+      lon: String,
+    },
+    default: null,
   },
 
   properties: [
@@ -32,6 +47,11 @@ const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>({
       default: [],
     },
   ],
+
+  password: {
+    type: String,
+    select: false,
+  },
 
   confirmEmailPin: {
     type: String,
