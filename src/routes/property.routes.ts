@@ -26,8 +26,6 @@ Router.route("/:propertyId")
   .delete(propertyController.deleteProperty)
   .get(propertyController.getProperty);
 
-Router.route("/:propertyId/user/:userId").get(
-  propertyController.getUserProperties
-);
+Router.route("/user/:userId").get(propertyController.getUserProperties);
 
 export default Router;

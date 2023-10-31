@@ -15,3 +15,28 @@ export const getUserDetails = Async(async (req, res, next) => {
 
   res.status(200).json(user);
 });
+
+export const updateUser = Async(async (req, res, next) => {
+  const currUser = req.user;
+  const { email, phone, location } = req.body;
+
+  if (!email || !phone || !location)
+    return next(
+      new AppError(400, "Please specify all details: email, phone and location")
+    );
+
+  const user = await User.findByIdAndUpdate(
+    currUser._id,
+    { email, phone, location },
+    { new: true }
+  );
+
+  if (!user) return next(new AppError(404, "User does not exists"));
+
+  req.user = {
+    ...currUser,
+    email: email,
+  };
+
+  res.status(201).json(user);
+});

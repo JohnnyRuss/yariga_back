@@ -32,12 +32,17 @@ export const getPropertyFormSuggestion = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const roomTypes = await RoomType.find().select("-__v").session(session);
+  const roomTypes = await RoomType.find()
+    .select("-__v")
+    .sort({ label: 1 })
+    .session(session);
   const propertyFeatures = await PropertyFeature.find()
     .select("-__v -icon")
+    .sort({ label: 1 })
     .session(session);
   const propertyTypes = await PropertyType.find()
     .select("-__v")
+    .sort({ label: 1 })
     .session(session);
   const propertyStatuses = await PropertyStatus.find()
     .select("-__v")
@@ -207,7 +212,24 @@ export const getAllProperties = Async(async (req, res, next) => {
 });
 
 export const getUserProperties = Async(async (req, res, next) => {
-  res.status(200).json("");
+  const { userId } = req.params;
+  const { limit } = req.query;
+
+  const queryLimit = limit ? +limit : 4;
+
+  const properties = await Property.find({ owner: userId })
+    .sort({ createdAt: 1 })
+    .limit(queryLimit)
+    .select(
+      "images title price propertyStatus propertyType location owner area bedroomsAmount bathroomsAmount"
+    )
+    .populate({
+      path: "owner",
+      select: "-properties",
+    })
+    .populate({ path: "propertyType" });
+
+  res.status(200).json(properties);
 });
 
 const PROPERTY_FEATURES = [
