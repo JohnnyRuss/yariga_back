@@ -1,4 +1,4 @@
-import { Document, Model, Schema } from "mongoose";
+import { Document, Model, Types as MongooseTypes } from "mongoose";
 
 export interface AgentT extends Document {
   username: string;
@@ -24,7 +24,7 @@ export interface AgentT extends Document {
     title: string;
     agencyLicense: string;
   };
-  listing: Array<Schema.Types.ObjectId>;
+  listing: Array<MongooseTypes.ObjectId>;
   serviceArea: {
     name: string;
     displayName: string;

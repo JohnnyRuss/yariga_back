@@ -13,6 +13,11 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
       required: true,
     },
 
+    agent: {
+      type: Schema.Types.ObjectId,
+      ref: "Agent",
+    },
+
     title: {
       type: String,
       required: true,

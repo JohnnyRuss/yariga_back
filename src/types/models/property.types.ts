@@ -1,4 +1,4 @@
-import { Document, Model, Schema } from "mongoose";
+import { Document, Model, Types as MongooseTypes } from "mongoose";
 
 enum PropertyStatus {
   RENT,
@@ -6,15 +6,16 @@ enum PropertyStatus {
 }
 
 export interface PropertyT extends Document {
-  _id: Schema.Types.ObjectId;
-  owner: Schema.Types.ObjectId;
+  _id: MongooseTypes.ObjectId;
+  owner: MongooseTypes.ObjectId;
+  agent: MongooseTypes.ObjectId;
   title: string;
   propertyStatus: keyof PropertyStatus;
   price: number;
-  propertyType: Schema.Types.ObjectId;
+  propertyType: MongooseTypes.ObjectId;
   area: number;
-  rooms: Schema.Types.ObjectId[];
-  features: Schema.Types.ObjectId[];
+  rooms: MongooseTypes.ObjectId[];
+  features: MongooseTypes.ObjectId[];
   bedroomsAmount: number;
   bathroomsAmount: number;
   location: {

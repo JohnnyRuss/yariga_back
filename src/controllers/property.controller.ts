@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Types as MongooseTypes, isValidObjectId } from "mongoose";
 
 import { Async, AppError } from "../lib";
 import {
@@ -161,7 +161,8 @@ export const createProperty = Async(async (req, res, next) => {
     { session, new: true }
   );
 
-  user.properties.push(newProperty._id);
+  if (isValidObjectId(newProperty._id))
+    user.properties.push(new MongooseTypes.ObjectId(newProperty._id));
   await user.save({ session });
 
   await session.commitTransaction();
@@ -187,10 +188,14 @@ export const getProperty = Async(async (req, res, next) => {
   const { propertyId } = req.params;
 
   const property = await Property.findById(propertyId)
-    .populate({ path: "owner" })
-    .populate({ path: "propertyType" })
-    .populate({ path: "rooms" })
-    .populate({ path: "features" });
+    .populate({ path: "owner", select: "-__v" })
+    .populate({
+      path: "agent",
+      select: "serviceArea username email avatar phone listing",
+    })
+    .populate({ path: "propertyType", select: "-__v" })
+    .populate({ path: "rooms", select: "-__v" })
+    .populate({ path: "features", select: "-__v" });
 
   if (!property) return next(new AppError(404, "Property does not exists"));
 

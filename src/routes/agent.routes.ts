@@ -8,4 +8,9 @@ Router.route("/").get(checkAuth, agentController.getAllAgents);
 
 Router.route("/:agentId").get(checkAuth, agentController.getAgent);
 
+Router.route("/hire/:agentId/:propertyId").post(
+  checkAuth,
+  agentController.hireAgent
+);
+
 export default Router;

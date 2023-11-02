@@ -1,7 +1,7 @@
-import { Model, Document, Schema } from "mongoose";
+import { Model, Document, Types as MongooseTypes } from "mongoose";
 
 export interface UserT extends Document {
-  _id: Schema.Types.ObjectId;
+  _id: MongooseTypes.ObjectId;
   username: string;
   email: string;
   phone: string;
@@ -22,7 +22,7 @@ export interface UserT extends Document {
   emailPinResetAt: string;
   passwordResetToken: string;
   passwordResetAt: string;
-  properties: [Schema.Types.ObjectId];
+  properties: [MongooseTypes.ObjectId];
 }
 
 export interface UserMethodsT {
