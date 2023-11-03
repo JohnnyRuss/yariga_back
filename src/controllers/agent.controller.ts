@@ -13,7 +13,10 @@ export const getAllAgents = Async(async (req, res, next) => {
 export const getAgent = Async(async (req, res, next) => {
   const { agentId } = req.params;
 
-  const agent = await Agent.findById(agentId);
+  const agent = await Agent.findById(agentId).populate({
+    path: "listing",
+    select: "propertyStatus",
+  });
 
   if (!agent) return next(new AppError(404, "Agent does not exists"));
 
@@ -26,25 +29,84 @@ export const hireAgent = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const agent = await Agent.findById(agentId)
+  const agent = await Agent.findByIdAndUpdate(
+    agentId,
+    {
+      $push: { listing: propertyId },
+    },
+    { new: true }
+  )
     .select("username email phone location listing avatar")
     .populate({ path: "listing", select: "propertyStatus" })
     .session(session);
 
-  const property = await Property.findById(propertyId).session(session);
+  const property = await Property.findByIdAndUpdate(
+    propertyId,
+    {
+      $set: { agent: agentId },
+    },
+    { new: true }
+  ).session(session);
 
   if (!agent || !property)
     return next(new AppError(404, "Agent or Property does not exists"));
 
-  if (isValidObjectId(propertyId))
-    agent.listing.push(new MongooseTypes.ObjectId(propertyId));
-  if (isValidObjectId(agentId))
-    property.agent = new MongooseTypes.ObjectId(agentId);
+  session.commitTransaction();
 
-  await agent.save({ session });
-  await property.save({ session });
+  res.status(201).json(agent);
+});
+
+export const fireAgent = Async(async (req, res, next) => {
+  const { agentId, propertyId } = req.params;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const agent = await Agent.findByIdAndUpdate(
+    agentId,
+    {
+      $pull: { listing: propertyId },
+    },
+    { new: true }
+  )
+    .select("username email phone location listing avatar")
+    .populate({ path: "listing", select: "propertyStatus" })
+    .session(session);
+
+  const property = await Property.findByIdAndUpdate(
+    propertyId,
+    {
+      $unset: { agent: null },
+    },
+    { new: true }
+  ).session(session);
+
+  if (!agent || !property)
+    return next(new AppError(404, "Agent or Property does not exists"));
 
   session.commitTransaction();
 
   res.status(201).json(agent);
+});
+
+export const getAgentProperties = Async(async (req, res, next) => {
+  const { agentId } = req.params;
+  const { limit } = req.query;
+
+  const queryLimit = limit ? +limit : 4;
+
+  const properties = await Agent.findById(agentId)
+    .select("listing")
+    .populate({
+      path: "listing",
+      select:
+        "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount",
+      options: { sort: { createdAt: -1 }, limit: queryLimit },
+      populate: [
+        { path: "owner", select: "username avatar email" },
+        { path: "agent", select: "username avatar email" },
+      ],
+    });
+
+  res.status(200).json(properties);
 });

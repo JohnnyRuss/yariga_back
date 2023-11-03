@@ -10,7 +10,7 @@ Router.route("/")
     propertyController.fileUpload,
     propertyController.createProperty
   )
-  .get(propertyController.getAllProperties);
+  .get(checkAuth, propertyController.getAllProperties);
 
 Router.route("/suggestions").get(
   checkAuth,
@@ -19,13 +19,21 @@ Router.route("/suggestions").get(
 
 Router.route("/rooms").get(checkAuth, propertyController.getPropertyRoomTypes);
 
-Router.route("/filter").get(propertyController.getPropertyFilters);
+Router.route("/filter").get(checkAuth, propertyController.getPropertyFilters);
+
+Router.route("/no-agent").get(
+  checkAuth,
+  propertyController.getUserPropertiesWithoutAgentIds
+);
 
 Router.route("/:propertyId")
-  .put(propertyController.updateProperty)
-  .delete(propertyController.deleteProperty)
-  .get(propertyController.getProperty);
+  .put(checkAuth, propertyController.updateProperty)
+  .delete(checkAuth, propertyController.deleteProperty)
+  .get(checkAuth, propertyController.getProperty);
 
-Router.route("/user/:userId").get(propertyController.getUserProperties);
+Router.route("/user/:userId").get(
+  checkAuth,
+  propertyController.getUserProperties
+);
 
 export default Router;

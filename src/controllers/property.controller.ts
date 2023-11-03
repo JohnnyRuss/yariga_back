@@ -205,11 +205,15 @@ export const getProperty = Async(async (req, res, next) => {
 export const getAllProperties = Async(async (req, res, next) => {
   const properties = await Property.find()
     .select(
-      "images title price propertyStatus propertyType location owner area bedroomsAmount bathroomsAmount"
+      "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount"
     )
     .populate({
       path: "owner",
-      select: "-properties",
+      select: "username email avatar",
+    })
+    .populate({
+      path: "agent",
+      select: "username email avatar",
     })
     .populate({ path: "propertyType" });
 
@@ -226,13 +230,27 @@ export const getUserProperties = Async(async (req, res, next) => {
     .sort({ createdAt: 1 })
     .limit(queryLimit)
     .select(
-      "images title price propertyStatus propertyType location owner area bedroomsAmount bathroomsAmount"
+      "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount"
     )
     .populate({
       path: "owner",
-      select: "-properties",
+      select: "username email avatar",
+    })
+    .populate({
+      path: "agent",
+      select: "username email avatar",
     })
     .populate({ path: "propertyType" });
+
+  res.status(200).json(properties);
+});
+
+export const getUserPropertiesWithoutAgentIds = Async(async (req, res, nxt) => {
+  const currUser = req.user;
+
+  const properties = await Property.find({
+    $and: [{ agent: { $exists: false } }, { owner: currUser._id }],
+  }).select("_id");
 
   res.status(200).json(properties);
 });
