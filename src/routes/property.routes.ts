@@ -31,6 +31,11 @@ Router.route("/:propertyId")
   .delete(checkAuth, propertyController.deleteProperty)
   .get(checkAuth, propertyController.getProperty);
 
+Router.route("/:propertyId/rate").post(
+  checkAuth,
+  propertyController.rateProperty
+);
+
 Router.route("/user/:userId").get(
   checkAuth,
   propertyController.getUserProperties

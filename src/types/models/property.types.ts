@@ -32,6 +32,11 @@ export interface PropertyT extends Document {
   images: Array<string>;
   createdAt: Date;
   updatedAt: Date;
+  avgRating: number;
+  ratings: Array<{
+    userId: string;
+    score: number;
+  }>;
 }
 
 export interface PropertyMethodsT {}

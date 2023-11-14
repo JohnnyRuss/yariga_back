@@ -107,9 +107,37 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
     },
 
     images: [{ type: String }],
+
+    avgRating: {
+      type: Number,
+      default: 0,
+    },
+
+    ratings: [
+      {
+        userId: {
+          type: String,
+          required: true,
+        },
+        score: {
+          type: Number,
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
+
+PropertySchema.pre("save", async function (next) {
+  if (!this.isModified("ratings")) return next();
+
+  this.avgRating =
+    this.ratings.reduce((acc, rating) => (acc += rating.score), 0) /
+    this.ratings.length;
+
+  next();
+});
 
 const Property = model<PropertyT, PropertyModelT>("Property", PropertySchema);
 

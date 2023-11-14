@@ -188,6 +188,7 @@ export const getProperty = Async(async (req, res, next) => {
   const { propertyId } = req.params;
 
   const property = await Property.findById(propertyId)
+    .select("-__v -ratings")
     .populate({ path: "owner", select: "-__v" })
     .populate({
       path: "agent",
@@ -253,6 +254,30 @@ export const getUserPropertiesWithoutAgentIds = Async(async (req, res, nxt) => {
   }).select("_id");
 
   res.status(200).json(properties);
+});
+
+export const rateProperty = Async(async (req, res, next) => {
+  const { propertyId } = req.params;
+  const { score } = req.body;
+  const currUser = req.user;
+
+  const property = await Property.findById(propertyId);
+
+  if (!property) return next(new AppError(404, "Property does not exists"));
+
+  const userRate = property.ratings.find(
+    (user) => user.userId === currUser._id
+  );
+
+  if (userRate && userRate.score !== score)
+    property.ratings[
+      property.ratings.findIndex((rate) => rate.userId === currUser._id)
+    ].score = score;
+  else if (!userRate) property.ratings.push({ userId: currUser._id, score });
+
+  await property.save({ validateBeforeSave: false });
+
+  return res.status(201).json({ avgRating: property.avgRating });
 });
 
 const PROPERTY_FEATURES = [
