@@ -3,7 +3,7 @@ import {
   PropertyModelT,
   PropertyMethodsT,
 } from "../types/models/property.types";
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 
 const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
   {
@@ -113,31 +113,27 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
       default: 0,
     },
 
-    ratings: [
+    reviews: [
       {
-        userId: {
-          type: String,
-          required: true,
-        },
-        score: {
-          type: Number,
-          required: true,
-        },
+        type: Schema.Types.ObjectId,
+        ref: "Review",
       },
     ],
   },
   { timestamps: true }
 );
 
-PropertySchema.pre("save", async function (next) {
-  if (!this.isModified("ratings")) return next();
+PropertySchema.methods.updateAvgRating = async function () {
+  const reviews = await mongoose.model("Review").find({ property: this._id });
 
-  this.avgRating =
-    this.ratings.reduce((acc, rating) => (acc += rating.score), 0) /
-    this.ratings.length;
+  const reviewsCount = reviews.length === 0 ? 1 : reviews.length;
 
-  next();
-});
+  const avg =
+    reviews.reduce((acc, review) => (acc += review.score), 0) / reviewsCount;
+  if (avg >= 0) this.avgRating = avg;
+
+  await this.save();
+};
 
 const Property = model<PropertyT, PropertyModelT>("Property", PropertySchema);
 

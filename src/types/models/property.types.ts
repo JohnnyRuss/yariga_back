@@ -33,12 +33,11 @@ export interface PropertyT extends Document {
   createdAt: Date;
   updatedAt: Date;
   avgRating: number;
-  ratings: Array<{
-    userId: string;
-    score: number;
-  }>;
+  reviews: Array<MongooseTypes.ObjectId>;
 }
 
-export interface PropertyMethodsT {}
+export interface PropertyMethodsT {
+  updateAvgRating: () => Promise<void>;
+}
 
 export type PropertyModelT = Model<PropertyT, {}, PropertyMethodsT>;

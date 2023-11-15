@@ -8,6 +8,7 @@ import {
   PropertyType,
   RoomType,
   PropertyStatus,
+  Review,
 } from "../models";
 
 import {
@@ -257,25 +258,44 @@ export const getUserPropertiesWithoutAgentIds = Async(async (req, res, nxt) => {
 });
 
 export const rateProperty = Async(async (req, res, next) => {
-  const { propertyId } = req.params;
-  const { score } = req.body;
   const currUser = req.user;
+
+  const { propertyId } = req.params;
+  const { score, review: feedback } = req.body;
 
   const property = await Property.findById(propertyId);
 
+  let review = await Review.findOne({
+    $and: [{ user: currUser._id }, { property: propertyId }],
+  });
+
   if (!property) return next(new AppError(404, "Property does not exists"));
 
-  const userRate = property.ratings.find(
-    (user) => user.userId === currUser._id
-  );
+  if (
+    review &&
+    (review.score !== score || (feedback && review.review !== feedback))
+  ) {
+    review.score = score;
 
-  if (userRate && userRate.score !== score)
-    property.ratings[
-      property.ratings.findIndex((rate) => rate.userId === currUser._id)
-    ].score = score;
-  else if (!userRate) property.ratings.push({ userId: currUser._id, score });
+    if (feedback && feedback !== review.review) {
+      review.review = feedback;
+      review.approved = false;
+    }
+
+    await review.save({ validateBeforeSave: false });
+  } else if (!review) {
+    review = await Review.create({
+      score,
+      review: feedback || "",
+      user: currUser._id,
+      property: propertyId,
+    });
+
+    property.reviews.push(review._id);
+  }
 
   await property.save({ validateBeforeSave: false });
+  await property.updateAvgRating();
 
   return res.status(201).json({ avgRating: property.avgRating });
 });
