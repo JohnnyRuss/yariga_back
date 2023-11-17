@@ -1,15 +1,19 @@
-import mongoose, { Types as MongooseTypes, isValidObjectId } from "mongoose";
+import mongoose, {
+  Query,
+  isValidObjectId,
+  Types as MongooseTypes,
+} from "mongoose";
 
-import { Async, AppError } from "../lib";
 import {
-  Property,
   User,
-  PropertyFeature,
-  PropertyType,
+  Property,
   RoomType,
+  PropertyType,
   PropertyStatus,
-  Review,
+  PropertyFeature,
 } from "../models";
+
+import { Async, AppError, API_Features } from "../lib";
 
 import {
   CLOUDINARY_CLOUD_NAME,
@@ -18,6 +22,8 @@ import {
 } from "../config/env";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+
+import { PropertyT } from "../types/models/property.types";
 
 cloudinary.config({
   cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -205,9 +211,24 @@ export const getProperty = Async(async (req, res, next) => {
 });
 
 export const getAllProperties = Async(async (req, res, next) => {
-  const properties = await Property.find()
+  const query = new API_Features<
+    Query<Array<PropertyT>, PropertyT>,
+    { [key: string]: string }
+  >(
+    Property.find()
+      .populate({ path: "propertyType" })
+      .populate({ path: "rooms" })
+      .populate({ path: "features" }),
+    req.query as { [key: string]: string }
+  );
+
+  const properties = await query
+    .propertyFilter()
+    .sort()
+    .paginate(3)
+    .getQuery()
     .select(
-      "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount"
+      "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount avgRating"
     )
     .populate({
       path: "owner",
@@ -216,10 +237,13 @@ export const getAllProperties = Async(async (req, res, next) => {
     .populate({
       path: "agent",
       select: "username email avatar",
-    })
-    .populate({ path: "propertyType" });
+    });
 
-  res.status(200).json(properties);
+  res.status(200).json({
+    properties,
+    pagesCount: query.pagesCount,
+    currentPage: query.currentPage,
+  });
 });
 
 export const getUserProperties = Async(async (req, res, next) => {
@@ -255,49 +279,6 @@ export const getUserPropertiesWithoutAgentIds = Async(async (req, res, nxt) => {
   }).select("_id");
 
   res.status(200).json(properties);
-});
-
-export const rateProperty = Async(async (req, res, next) => {
-  const currUser = req.user;
-
-  const { propertyId } = req.params;
-  const { score, review: feedback } = req.body;
-
-  const property = await Property.findById(propertyId);
-
-  let review = await Review.findOne({
-    $and: [{ user: currUser._id }, { property: propertyId }],
-  });
-
-  if (!property) return next(new AppError(404, "Property does not exists"));
-
-  if (
-    review &&
-    (review.score !== score || (feedback && review.review !== feedback))
-  ) {
-    review.score = score;
-
-    if (feedback && feedback !== review.review) {
-      review.review = feedback;
-      review.approved = false;
-    }
-
-    await review.save({ validateBeforeSave: false });
-  } else if (!review) {
-    review = await Review.create({
-      score,
-      review: feedback || "",
-      user: currUser._id,
-      property: propertyId,
-    });
-
-    property.reviews.push(review._id);
-  }
-
-  await property.save({ validateBeforeSave: false });
-  await property.updateAvgRating();
-
-  return res.status(201).json({ avgRating: property.avgRating });
 });
 
 const PROPERTY_FEATURES = [

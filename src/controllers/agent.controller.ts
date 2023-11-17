@@ -1,13 +1,25 @@
-import mongoose, { isValidObjectId, Types as MongooseTypes } from "mongoose";
-import { Async, AppError } from "../lib";
+import mongoose, { Query, Types as MongooseTypes } from "mongoose";
+import { Async, AppError, API_Features } from "../lib";
 import { Agent, Property } from "../models";
 
-export const getAllAgents = Async(async (req, res, next) => {
-  const agents = await Agent.find().select(
-    "avatar username email phone serviceArea listing"
-  );
+import { AgentT } from "../types/models/agent.types";
 
-  res.status(200).json(agents);
+export const getAllAgents = Async(async (req, res, next) => {
+  const query = new API_Features<
+    Query<Array<AgentT>, AgentT>,
+    { [key: string]: string }
+  >(Agent.find(), req.query as { [key: string]: string });
+
+  const agents = await query
+    .paginate(6)
+    .getQuery()
+    .select("avatar username email phone serviceArea listing");
+
+  res.status(200).json({
+    agents,
+    pagesCount: query.pagesCount,
+    currentPage: query.currentPage,
+  });
 });
 
 export const getAgent = Async(async (req, res, next) => {

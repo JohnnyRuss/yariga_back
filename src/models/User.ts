@@ -4,75 +4,78 @@ import crypto from "crypto";
 import { UserT, UserMethodsT, UserModelT } from "../types/models/user.types";
 import { USER_DEFAULT_AVATAR } from "../config/config";
 
-const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>({
-  username: {
-    type: String,
-    required: true,
-  },
-
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-
-  avatar: {
-    type: String,
-  },
-
-  phone: {
-    type: String,
-    default: "",
-  },
-
-  location: {
-    type: {
-      name: String,
-      displayName: String,
-      city: String,
-      country: String,
-      state: String,
-      addressType: String,
-      postcode: String,
-      lat: String,
-      lon: String,
+const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>(
+  {
+    username: {
+      type: String,
+      required: true,
     },
-    default: null,
-  },
 
-  properties: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: "Property",
-      default: [],
+    email: {
+      type: String,
+      required: true,
+      unique: true,
     },
-  ],
 
-  password: {
-    type: String,
-    select: false,
-  },
+    avatar: {
+      type: String,
+    },
 
-  confirmEmailPin: {
-    type: String,
-    select: false,
-  },
+    phone: {
+      type: String,
+      default: "",
+    },
 
-  emailPinResetAt: {
-    type: String,
-    select: false,
-  },
+    location: {
+      type: {
+        name: String,
+        displayName: String,
+        city: String,
+        country: String,
+        state: String,
+        addressType: String,
+        postcode: String,
+        lat: String,
+        lon: String,
+      },
+      default: null,
+    },
 
-  passwordResetToken: {
-    type: String,
-    select: false,
-  },
+    properties: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Property",
+        default: [],
+      },
+    ],
 
-  passwordResetAt: {
-    type: String,
-    select: false,
+    password: {
+      type: String,
+      select: false,
+    },
+
+    confirmEmailPin: {
+      type: String,
+      select: false,
+    },
+
+    emailPinResetAt: {
+      type: String,
+      select: false,
+    },
+
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+
+    passwordResetAt: {
+      type: String,
+      select: false,
+    },
   },
-});
+  { timestamps: true }
+);
 
 UserSchema.pre("save", async function (next) {
   if (this.avatar) return next();
