@@ -13,7 +13,7 @@ import {
   PropertyFeature,
 } from "../models";
 
-import { Async, AppError, API_Features } from "../lib";
+import { Async, AppError, API_Features, API_FeatureUtils } from "../lib";
 
 import {
   CLOUDINARY_CLOUD_NAME,
@@ -211,38 +211,153 @@ export const getProperty = Async(async (req, res, next) => {
 });
 
 export const getAllProperties = Async(async (req, res, next) => {
-  const query = new API_Features<
-    Query<Array<PropertyT>, PropertyT>,
-    { [key: string]: string }
-  >(
-    Property.find()
-      .populate({ path: "propertyType" })
-      .populate({ path: "rooms" })
-      .populate({ path: "features" }),
+  const queryUtils = new API_FeatureUtils(
     req.query as { [key: string]: string }
   );
 
-  const properties = await query
-    .propertyFilter()
-    .sort()
-    .paginate(3)
-    .getQuery()
-    .select(
-      "images title price propertyStatus propertyType location owner agent area bedroomsAmount bathroomsAmount avgRating"
-    )
-    .populate({
-      path: "owner",
-      select: "username email avatar",
-    })
-    .populate({
-      path: "agent",
-      select: "username email avatar",
-    });
+  const queryObject = queryUtils.getPropertiesFilterQueryObject();
+  const sortObject = queryUtils.getAggregationSortQueryObject();
+  const paginationObject = queryUtils.getPaginationInfo();
+
+  const pipelineLookups = [
+    {
+      $lookup: {
+        from: "roomtypes",
+        localField: "rooms",
+        foreignField: "_id",
+        as: "rooms",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "propertytypes",
+        localField: "propertyType",
+        foreignField: "_id",
+        as: "propertyType",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "propertyfeatures",
+        localField: "features",
+        foreignField: "_id",
+        as: "features",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              email: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+
+    {
+      $lookup: {
+        from: "agents",
+        localField: "agent",
+        foreignField: "_id",
+        as: "agent",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              email: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+  ];
+
+  const [properties] = await Property.aggregate([
+    {
+      $facet: {
+        sum: [
+          ...pipelineLookups,
+
+          {
+            $match: { ...queryObject },
+          },
+
+          {
+            $group: {
+              _id: null,
+              sum: { $sum: 1 },
+            },
+          },
+
+          {
+            $project: {
+              _id: 0,
+            },
+          },
+        ],
+        data: [
+          {
+            $sort: { ...sortObject },
+          },
+
+          ...pipelineLookups,
+
+          {
+            $project: {
+              images: 1,
+              title: 1,
+              price: 1,
+              propertyStatus: 1,
+              propertyType: { $arrayElemAt: ["$propertyType", 0] },
+              location: 1,
+              owner: { $arrayElemAt: ["$owner", 0] },
+              agent: { $arrayElemAt: ["$agent", 0] },
+              area: 1,
+              bedroomsAmount: 1,
+              bathroomsAmount: 1,
+              avgRating: 1,
+              features: 1,
+              rooms: 1,
+            },
+          },
+
+          {
+            $match: { ...queryObject },
+          },
+
+          {
+            $skip: paginationObject.skip,
+          },
+
+          {
+            $limit: paginationObject.limit,
+          },
+        ],
+      },
+    },
+  ]);
+
+  const { sum, data } = properties;
+  const propertiesTotalCount = sum[0].sum;
+  const currentPage = paginationObject.currentPage;
+  const pagesCount = Math.ceil(propertiesTotalCount / paginationObject.limit);
 
   res.status(200).json({
-    properties,
-    pagesCount: query.pagesCount,
-    currentPage: query.currentPage,
+    properties: data,
+    pagesCount,
+    currentPage,
   });
 });
 
