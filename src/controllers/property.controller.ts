@@ -350,7 +350,7 @@ export const getAllProperties = Async(async (req, res, next) => {
   ]);
 
   const { sum, data } = properties;
-  const propertiesTotalCount = sum[0].sum;
+  const propertiesTotalCount = sum[0]?.sum || 0;
   const currentPage = paginationObject.currentPage;
   const pagesCount = Math.ceil(propertiesTotalCount / paginationObject.limit);
 

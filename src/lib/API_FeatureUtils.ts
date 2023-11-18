@@ -9,6 +9,7 @@ class API_FeatureUtils {
 
   getPropertiesFilterQueryObject() {
     const availableFilterKeys = [
+      "search",
       "state",
       "rooms",
       "price",
@@ -20,7 +21,8 @@ class API_FeatureUtils {
 
     const arrayKeys = ["rooms", "features"];
 
-    let convertedFilter: { [key: string]: string | Array<string> } = {};
+    let convertedFilter: { [key: string]: string | Array<string> | number } =
+      {};
 
     Object.keys(this.query)
       .filter((key: string) => availableFilterKeys.includes(key))
@@ -45,13 +47,25 @@ class API_FeatureUtils {
       [key: string]:
         | string
         | Array<string>
-        | { [key: string]: string | Array<string> };
+        | number
+        | {
+            [key: string]: string | Array<string> | number;
+          }
+        | Array<{ [key: string]: string | { [key: string]: string } }>;
     } = {};
 
     if (convertedFilter.propertyStatus)
       queryObject.propertyStatus = convertedFilter.propertyStatus;
 
-    if (convertedFilter.price) queryObject.price = convertedFilter.price;
+    if (convertedFilter.price) {
+      const priceObject: { [key: string]: number } = {};
+
+      Object.entries(convertedFilter.price).forEach(([operator, value]) => {
+        priceObject[operator] = parseInt(value);
+      });
+
+      queryObject.price = priceObject;
+    }
 
     if (convertedFilter.propertyType)
       queryObject["propertyType.value"] = convertedFilter.propertyType;
@@ -64,13 +78,25 @@ class API_FeatureUtils {
 
     if (convertedFilter.rooms)
       queryObject["rooms.value"] = {
-        $in: convertedFilter.rooms as Array<string>,
+        $all: convertedFilter.rooms as Array<string>,
       };
 
     if (convertedFilter.features)
       queryObject["features.value"] = {
-        $in: convertedFilter.features as Array<string>,
+        $all: convertedFilter.features as Array<string>,
       };
+
+    if (convertedFilter.search) {
+      const value = convertedFilter.search as string;
+
+      queryObject["$or"] = [
+        { title: { $regex: value, $options: "i" } },
+        { ["location.country"]: { $regex: value, $options: "i" } },
+        { ["location.city"]: { $regex: value, $options: "i" } },
+        { ["location.state"]: { $regex: value, $options: "i" } },
+        { ["location.displayName"]: { $regex: value, $options: "i" } },
+      ];
+    }
 
     return queryObject;
   }
