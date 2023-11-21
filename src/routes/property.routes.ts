@@ -21,9 +21,9 @@ Router.route("/rooms").get(checkAuth, propertyController.getPropertyRoomTypes);
 
 Router.route("/filter").get(checkAuth, propertyController.getPropertyFilters);
 
-Router.route("/no-agent").get(
+Router.route("/related").post(
   checkAuth,
-  propertyController.getUserPropertiesWithoutAgentIds
+  propertyController.getRelatedProperties
 );
 
 Router.route("/:propertyId")

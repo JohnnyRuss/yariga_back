@@ -1,8 +1,4 @@
-import mongoose, {
-  Query,
-  isValidObjectId,
-  Types as MongooseTypes,
-} from "mongoose";
+import mongoose, { isValidObjectId, Types as MongooseTypes } from "mongoose";
 
 import {
   User,
@@ -23,8 +19,6 @@ import {
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 
-import { PropertyT } from "../types/models/property.types";
-
 cloudinary.config({
   cloud_name: CLOUDINARY_CLOUD_NAME,
   api_key: CLOUDINARY_API_KEY,
@@ -33,7 +27,7 @@ cloudinary.config({
 
 export const fileUpload = multer({
   storage: multer.memoryStorage(),
-}).array("new_images[]", 14);
+}).array("new_images[]", 30);
 
 export const getPropertyFormSuggestion = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -62,62 +56,6 @@ export const getPropertyFormSuggestion = Async(async (req, res, next) => {
     propertyTypes,
     roomTypes,
     propertyStatuses,
-  });
-});
-
-export const getPropertyFilters = Async(async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  const roomTypes = await RoomType.find().select("-__v").session(session);
-  const statuses = await PropertyStatus.find().select("-__v").session(session);
-  const propertyFeatures = await PropertyFeature.find()
-    .select("-__v -icon")
-    .session(session);
-  const propertyTypes = await PropertyType.find()
-    .select("-__v")
-    .session(session);
-
-  const countries = await Property.find()
-    .distinct("location.country")
-    .session(session);
-  const cities = await Property.find()
-    .distinct("location.city")
-    .session(session);
-  const states = await Property.find()
-    .distinct("location.state")
-    .session(session);
-
-  const sort = [
-    {
-      label: "Price (Asc)",
-      value: "price",
-    },
-    {
-      label: "Price (Desc)",
-      value: "-price",
-    },
-    {
-      label: "Publish Date (Asc)",
-      value: "createdAt",
-    },
-    {
-      label: "Publish Date (Desc)",
-      value: "-createdAt",
-    },
-  ];
-
-  session.commitTransaction();
-
-  res.status(200).json({
-    statuses,
-    propertyTypes,
-    roomTypes,
-    propertyFeatures,
-    countries,
-    cities,
-    states,
-    sort,
   });
 });
 
@@ -185,29 +123,60 @@ export const deleteProperty = Async(async (req, res, next) => {
   res.status(204).json("");
 });
 
-export const getPropertyRoomTypes = Async(async (req, res, next) => {
-  const rooms = await RoomType.find();
+export const getPropertyFilters = Async(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  res.status(200).json(rooms);
-});
+  const roomTypes = await RoomType.find().select("-__v").session(session);
+  const statuses = await PropertyStatus.find().select("-__v").session(session);
+  const propertyFeatures = await PropertyFeature.find()
+    .select("-__v -icon")
+    .session(session);
+  const propertyTypes = await PropertyType.find()
+    .select("-__v")
+    .session(session);
 
-export const getProperty = Async(async (req, res, next) => {
-  const { propertyId } = req.params;
+  const countries = await Property.find()
+    .distinct("location.country")
+    .session(session);
+  const cities = await Property.find()
+    .distinct("location.city")
+    .session(session);
+  const states = await Property.find()
+    .distinct("location.state")
+    .session(session);
 
-  const property = await Property.findById(propertyId)
-    .select("-__v -ratings")
-    .populate({ path: "owner", select: "-__v" })
-    .populate({
-      path: "agent",
-      select: "serviceArea username email avatar phone listing",
-    })
-    .populate({ path: "propertyType", select: "-__v" })
-    .populate({ path: "rooms", select: "-__v" })
-    .populate({ path: "features", select: "-__v" });
+  const sort = [
+    {
+      label: "Price (Asc)",
+      value: "price",
+    },
+    {
+      label: "Price (Desc)",
+      value: "-price",
+    },
+    {
+      label: "Publish Date (Asc)",
+      value: "createdAt",
+    },
+    {
+      label: "Publish Date (Desc)",
+      value: "-createdAt",
+    },
+  ];
 
-  if (!property) return next(new AppError(404, "Property does not exists"));
+  session.commitTransaction();
 
-  res.status(200).json(property);
+  res.status(200).json({
+    statuses,
+    propertyTypes,
+    roomTypes,
+    propertyFeatures,
+    countries,
+    cities,
+    states,
+    sort,
+  });
 });
 
 export const getAllProperties = Async(async (req, res, next) => {
@@ -386,14 +355,186 @@ export const getUserProperties = Async(async (req, res, next) => {
   res.status(200).json(properties);
 });
 
-export const getUserPropertiesWithoutAgentIds = Async(async (req, res, nxt) => {
-  const currUser = req.user;
+export const getRelatedProperties = Async(async (req, res, next) => {
+  const { roomIds, featureIds, activePropertyId } = req.body;
 
-  const properties = await Property.find({
-    $and: [{ agent: { $exists: false } }, { owner: currUser._id }],
-  }).select("_id");
+  const candidateRooms =
+    roomIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+
+  const candidateFeatures =
+    featureIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+
+  const propertyId = new mongoose.Types.ObjectId(activePropertyId);
+
+  const pipelineLookups = [
+    {
+      $lookup: {
+        from: "roomtypes",
+        localField: "rooms",
+        foreignField: "_id",
+        as: "rooms",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "propertytypes",
+        localField: "propertyType",
+        foreignField: "_id",
+        as: "propertyType",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "propertyfeatures",
+        localField: "features",
+        foreignField: "_id",
+        as: "features",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              email: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+
+    {
+      $lookup: {
+        from: "agents",
+        localField: "agent",
+        foreignField: "_id",
+        as: "agent",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              email: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+  ];
+
+  const properties = await Property.aggregate([
+    {
+      $match: {
+        _id: { $ne: propertyId },
+        $or: [
+          { rooms: { $in: candidateRooms } },
+          { features: { $in: candidateFeatures } },
+        ],
+      },
+    },
+
+    {
+      $project: {
+        title: 1,
+        price: 1,
+        propertyStatus: 1,
+        propertyType: 1,
+        images: 1,
+        location: 1,
+        owner: 1,
+        agent: 1,
+        area: 1,
+        bedroomsAmount: 1,
+        bathroomsAmount: 1,
+        avgRating: 1,
+        features: 1,
+        rooms: 1,
+        commonFeatures: {
+          $size: {
+            $setIntersection: ["$features", candidateFeatures],
+          },
+        },
+        commonRooms: {
+          $size: {
+            $setIntersection: ["$rooms", candidateRooms],
+          },
+        },
+      },
+    },
+
+    {
+      $sort: {
+        commonRooms: -1,
+        commonFeatures: -1,
+      },
+    },
+
+    {
+      $limit: 15,
+    },
+
+    ...pipelineLookups,
+
+    {
+      $addFields: {
+        agent: { $arrayElemAt: ["$agent", 0] },
+        owner: { $arrayElemAt: ["$owner", 0] },
+        propertyType: { $arrayElemAt: ["$propertyType", 0] },
+      },
+    },
+
+    {
+      $project: {
+        commonRooms: 0,
+        commonFeatures: 0,
+      },
+    },
+  ]);
 
   res.status(200).json(properties);
+});
+
+export const getProperty = Async(async (req, res, next) => {
+  const { propertyId } = req.params;
+
+  const property = await Property.findById(propertyId)
+    .select("-__v")
+    .populate({ path: "owner", select: "-__v" })
+    .populate({
+      path: "agent",
+      select: "serviceArea username email avatar phone listing",
+    })
+    .populate({ path: "propertyType", select: "-__v" })
+    .populate({ path: "rooms", select: "-__v" })
+    .populate({ path: "features", select: "-__v" })
+    .populate({
+      path: "reviews",
+      match: { approved: true },
+      select: "-__v",
+      populate: [
+        { path: "user", select: "username avatar createdAt" },
+        { path: "property", select: "title propertyStatus price" },
+      ],
+    });
+
+  if (!property) return next(new AppError(404, "Property does not exists"));
+
+  res.status(200).json(property);
+});
+
+export const getPropertyRoomTypes = Async(async (req, res, next) => {
+  const rooms = await RoomType.find();
+
+  res.status(200).json(rooms);
 });
 
 const PROPERTY_FEATURES = [
@@ -409,3 +550,16 @@ async function createFeatures() {
 }
 
 // createFeatures();
+
+const PROPERTY_TYPE = [
+  {
+    label: "",
+    value: "",
+  },
+];
+
+async function createPropertyType() {
+  await PropertyType.insertMany(PROPERTY_TYPE);
+}
+
+// createPropertyType();
