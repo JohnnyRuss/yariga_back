@@ -25,10 +25,6 @@ class API_Features<
 
     this.currentPage = currentPage;
 
-    this.dbQueryClone.countDocuments().then((count) => {
-      this.pagesCount = Math.ceil(count / limit);
-    });
-
     this.dbQuery = this.dbQuery.skip(skip).limit(limit);
 
     return this;
@@ -40,6 +36,18 @@ class API_Features<
     this.dbQuery = this.dbQuery.find(queryObject) as any;
 
     return this;
+  }
+
+  async countDocuments() {
+    const { limit } = this.query;
+    const paginationLimit = limit ? Number(limit) : 10;
+
+    const docsCount = await this.dbQueryClone.countDocuments();
+    const count = Math.ceil(docsCount / paginationLimit);
+
+    this.pagesCount = count;
+
+    return count;
   }
 
   sort() {

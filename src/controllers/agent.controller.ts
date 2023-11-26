@@ -2,22 +2,22 @@ import mongoose, { Query, Types as MongooseTypes } from "mongoose";
 import { Async, AppError, API_Features } from "../lib";
 import { Agent, Property } from "../models";
 
-import { AgentT } from "../types/models/agent.types";
-
 export const getAllAgents = Async(async (req, res, next) => {
-  const query = new API_Features<
-    Query<Array<AgentT>, AgentT>,
-    { [key: string]: string }
-  >(Agent.find(), req.query as { [key: string]: string });
+  const query = new API_Features(
+    Agent.find(),
+    req.query as { [key: string]: string }
+  );
 
   const agents = await query
     .paginate(6)
     .getQuery()
     .select("avatar username email phone serviceArea listing");
 
+  const pagesCount = await query.countDocuments();
+
   res.status(200).json({
     agents,
-    pagesCount: query.pagesCount,
+    pagesCount,
     currentPage: query.currentPage,
   });
 });

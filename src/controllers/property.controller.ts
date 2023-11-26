@@ -7,9 +7,11 @@ import {
   PropertyType,
   PropertyStatus,
   PropertyFeature,
+  Review,
+  Agent,
 } from "../models";
 
-import { Async, AppError, API_Features, API_FeatureUtils } from "../lib";
+import { Async, AppError, API_FeatureUtils } from "../lib";
 
 import {
   CLOUDINARY_CLOUD_NAME,
@@ -66,61 +68,201 @@ export const createProperty = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const user = await User.findById(currentUser._id).session(session);
+  try {
+    const user = await User.findById(currentUser._id).session(session);
 
-  if (!user) return next(new AppError(404, "user does not exists"));
+    if (!user) return next(new AppError(404, "user does not exists"));
 
-  let imgUrls: string[] = [];
+    let imgUrls: string[] = [];
 
-  const files: Express.Multer.File[] =
-    req.files as unknown as Express.Multer.File[];
+    const files: Express.Multer.File[] =
+      req.files as unknown as Express.Multer.File[];
 
-  if (files[0])
-    await Promise.all(
-      files.map(async (file) => {
-        try {
-          const base64 = Buffer.from(file.buffer).toString("base64");
-          let dataURI = `data:${file.mimetype};base64,${base64}`;
+    if (files[0])
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const base64 = Buffer.from(file.buffer).toString("base64");
+            let dataURI = `data:${file.mimetype};base64,${base64}`;
 
-          const { secure_url } = await cloudinary.uploader.upload(dataURI, {
-            resource_type: "image",
-            folder: "properties",
-            format: "webp",
-          });
+            const { secure_url } = await cloudinary.uploader.upload(dataURI, {
+              resource_type: "image",
+              folder: "properties",
+              format: "webp",
+            });
 
-          imgUrls.push(secure_url);
-        } catch (error) {
-          return next(new AppError(404, "Ocurred error during file upload"));
-        }
-      })
+            imgUrls.push(secure_url);
+          } catch (error) {
+            return next(new AppError(404, "Ocurred error during file upload"));
+          }
+        })
+      );
+
+    const [newProperty] = await Property.create(
+      [
+        {
+          ...body,
+          images: imgUrls,
+          owner: currentUser._id.toString(),
+        },
+      ],
+      { session, new: true }
     );
 
-  const [newProperty] = await Property.create(
-    [
-      {
-        ...body,
-        images: imgUrls,
-        owner: currentUser._id.toString(),
-      },
-    ],
-    { session, new: true }
-  );
+    if (isValidObjectId(newProperty._id))
+      user.properties.push(new MongooseTypes.ObjectId(newProperty._id));
 
-  if (isValidObjectId(newProperty._id))
-    user.properties.push(new MongooseTypes.ObjectId(newProperty._id));
-  await user.save({ session });
+    await user.save({ session });
 
-  await session.commitTransaction();
+    await session.commitTransaction();
 
-  res.status(201).json("Property is created");
+    res.status(201).json("Property is created");
+  } catch (error) {
+    await session.abortTransaction();
+    return next(new AppError(500, "Internal Server Error"));
+  } finally {
+    session.endSession();
+  }
 });
 
 export const updateProperty = Async(async (req, res, next) => {
-  res.status(201).json("");
+  const body = req.body;
+  const { propertyId } = req.params;
+  const currentUser = req.user;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const property = await Property.findById(propertyId).session(session);
+
+    if (!property) return next(new AppError(404, "Property does not exists"));
+    else if (property.owner.toString() !== currentUser._id)
+      return next(
+        new AppError(404, "You are not available for this operation")
+      );
+
+    // UPLOAD NEW IMAGES
+    let imgUrls: string[] = [];
+
+    if (body.images && Array.isArray(body.images))
+      body.images.forEach((img: string) => imgUrls.push(img));
+
+    const files: Express.Multer.File[] =
+      req.files as unknown as Express.Multer.File[];
+
+    if (files[0])
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const base64 = Buffer.from(file.buffer).toString("base64");
+            let dataURI = `data:${file.mimetype};base64,${base64}`;
+
+            const { secure_url } = await cloudinary.uploader.upload(dataURI, {
+              resource_type: "image",
+              folder: "properties",
+              format: "webp",
+            });
+
+            imgUrls.push(secure_url);
+          } catch (error) {
+            return next(new AppError(404, "Ocurred error during file upload"));
+          }
+        })
+      );
+
+    // DELETE REMOVED IMAGES
+    if (body.images_to_delete && Array.isArray(body.images_to_delete)) {
+      const generatePublicIds = (url: string): string => {
+        const fragments = url.split("/");
+        return fragments
+          .slice(fragments.length - 2)
+          .join("/")
+          .split(".")[0];
+      };
+
+      const imagePublicIds = body.images_to_delete.map((image: string) =>
+        generatePublicIds(image)
+      );
+
+      await cloudinary.api.delete_resources(imagePublicIds, {
+        resource_type: "image",
+      });
+    }
+
+    await Property.findByIdAndUpdate(propertyId, {
+      $set: { ...body, images: imgUrls },
+    }).session(session);
+
+    await session.commitTransaction();
+
+    res.status(201).json("Property is created");
+  } catch (error) {
+    console.log(error);
+    await session.abortTransaction();
+    return next(new AppError(500, "Internal Server Error"));
+  } finally {
+    session.endSession();
+  }
 });
 
 export const deleteProperty = Async(async (req, res, next) => {
-  res.status(204).json("");
+  const { propertyId } = req.params;
+  const currUser = req.user;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const propertyToDelete = await Property.findByIdAndDelete(
+      propertyId
+    ).session(session);
+
+    if (!propertyToDelete)
+      return next(new AppError(404, "Property does not exists"));
+    else if (propertyToDelete.owner.toString() !== currUser._id)
+      return next(new AppError(403, "You are not allowed for this operation"));
+
+    /// 1. Delete property images
+    const generatePublicIds = (url: string): string => {
+      const fragments = url.split("/");
+      return fragments
+        .slice(fragments.length - 2)
+        .join("/")
+        .split(".")[0];
+    };
+
+    const imagePublicIds = propertyToDelete.images.map((image) =>
+      generatePublicIds(image)
+    );
+
+    await cloudinary.api.delete_resources(imagePublicIds, {
+      resource_type: "image",
+    });
+
+    // 2. delete property reviews
+    await Review.deleteMany({ property: propertyId }).session(session);
+
+    // 2. remove property from owner properties
+    await User.findByIdAndUpdate(propertyToDelete.owner, {
+      $pull: { properties: propertyToDelete._id },
+    }).session(session);
+
+    // 3. remove property from agents list
+    if (propertyToDelete.agent)
+      await Agent.findByIdAndUpdate(propertyToDelete.agent, {
+        $pull: { listing: propertyToDelete._id },
+      }).session(session);
+
+    await session.commitTransaction();
+
+    res.status(204).json("Property is deleted");
+  } catch (error) {
+    await session.abortTransaction();
+    return next(new AppError(500, "Internal Server Error"));
+  } finally {
+    session.endSession();
+  }
 });
 
 export const getPropertyFilters = Async(async (req, res, next) => {

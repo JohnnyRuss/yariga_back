@@ -8,4 +8,10 @@ Router.route("/:userId")
   .get(checkAuth, userController.getUserDetails)
   .put(checkAuth, userController.updateUser);
 
+Router.route("/:userId/profile").post(
+  checkAuth,
+  userController.fileUpload,
+  userController.updateProfileImage
+);
+
 export default Router;

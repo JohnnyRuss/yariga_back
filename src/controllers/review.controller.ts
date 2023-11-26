@@ -59,10 +59,7 @@ export const getOwnerReviews = Async(async (req, res, next) => {
   if (approved && +approved === 1) query.approved = true;
   else if (approved && +approved === 0) query.approved = false;
 
-  const reviewsQuery = new API_Features<
-    Query<Array<ReviewT>, ReviewT>,
-    { [key: string]: string }
-  >(
+  const reviewsQuery = new API_Features(
     Review.find({
       ...query,
       property: { $in: user.properties },
@@ -76,10 +73,12 @@ export const getOwnerReviews = Async(async (req, res, next) => {
     .populate({ path: "user", select: "avatar createdAt username" })
     .populate({ path: "property", select: "title propertyStatus price" });
 
+  const pagesCount = await reviewsQuery.countDocuments();
+
   res.status(200).json({
     reviews,
+    pagesCount,
     currentPage: reviewsQuery.currentPage,
-    pagesCount: reviewsQuery.pagesCount,
   });
 });
 

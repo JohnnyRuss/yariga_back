@@ -27,7 +27,11 @@ Router.route("/related").post(
 );
 
 Router.route("/:propertyId")
-  .put(checkAuth, propertyController.updateProperty)
+  .put(
+    checkAuth,
+    propertyController.fileUpload,
+    propertyController.updateProperty
+  )
   .delete(checkAuth, propertyController.deleteProperty)
   .get(checkAuth, propertyController.getProperty);
 
