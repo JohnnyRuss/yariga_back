@@ -6,3 +6,5 @@ export { default as RoomType } from "./RoomType";
 export { default as User } from "./User";
 export { default as Agent } from "./Agent";
 export { default as Review } from "./Review";
+export { default as Conversation } from "./Conversation";
+export { default as Message } from "./Message";
