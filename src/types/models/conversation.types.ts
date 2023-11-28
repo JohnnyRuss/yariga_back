@@ -7,6 +7,7 @@ interface ConversationT extends Document {
   messages: Array<MongooseTypes.ObjectId>;
   isReadBy: Array<string>;
   isDeletedBy: Array<string>;
+  lastMessage: MongooseTypes.ObjectId;
 }
 
 type ConversationMethodsT = {};

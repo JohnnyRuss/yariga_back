@@ -7,9 +7,15 @@ import { Schema, model } from "mongoose";
 
 const MessageSchema = new Schema<MessageT, MessageModelT, MessageMethodsT>(
   {
-    sender: { type: Schema.Types.ObjectId, ref: "User" },
+    sender: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Please specify sender"],
+    },
 
     isDeletedBy: [{ type: String }],
+
+    text: { type: String },
 
     links: [{ type: String }],
 
@@ -17,7 +23,10 @@ const MessageSchema = new Schema<MessageT, MessageModelT, MessageMethodsT>(
 
     media: [{ type: String }],
 
-    conversation: { type: String },
+    conversation: {
+      type: String,
+      required: [true, "Please specify the conversation"],
+    },
   },
   { timestamps: true }
 );

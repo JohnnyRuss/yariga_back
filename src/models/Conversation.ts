@@ -18,6 +18,8 @@ const ConversationSchema = new Schema<
     isReadBy: [{ type: String }],
 
     isDeletedBy: [{ type: String }],
+
+    lastMessage: { type: Schema.Types.ObjectId, ref: "Message" },
   },
   { timestamps: true }
 );

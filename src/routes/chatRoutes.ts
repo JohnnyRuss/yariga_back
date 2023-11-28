@@ -4,7 +4,9 @@ import * as chatController from "../controllers/chat.controller";
 
 const Router = ExpressRouter();
 
-Router.route("/").post(checkAuth, chatController.createConversation);
+Router.route("/")
+  .post(checkAuth, chatController.createConversation)
+  .get(checkAuth, chatController.getAllConversations);
 
 Router.route("/:conversationId")
   .delete(checkAuth, chatController.deleteConversation)
@@ -19,7 +21,7 @@ Router.route("/:conversationId/message")
   .post(checkAuth, chatController.sendMessage)
   .delete(checkAuth, chatController.deleteMessage);
 
-Router.route("/:conversationId/read/:userId").get(
+Router.route("/:conversationId/read").patch(
   checkAuth,
   chatController.markConversationAsRead
 );

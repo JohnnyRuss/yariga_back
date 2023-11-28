@@ -6,6 +6,7 @@ type MessageT = Document & {
   updatedAt: string;
   sender: MongooseTypes.ObjectId;
   isDeletedBy: Array<string>;
+  text: string;
   links: Array<string>;
   media: Array<string>;
   files: Array<string>;
