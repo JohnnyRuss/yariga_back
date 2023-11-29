@@ -13,24 +13,24 @@ export const createConversation = Async(async (req, res, next) => {
     return next(new AppError(404, "Adressat user does not exists"));
 
   // 2.0 check if conversation with same participants already exists
-  const existingConversation = await Conversation.findOne({
+  const conversation = await Conversation.findOne({
     participants: { $all: [currUser._id, adressat] },
   });
 
-  if (existingConversation) {
-    const conversationIsDeletedByCurrUser =
-      existingConversation.isDeletedBy.includes(currUser._id);
+  if (conversation) {
+    const conversationIsDeletedByCurrUser = conversation.isDeletedBy.includes(
+      currUser._id
+    );
 
     if (conversationIsDeletedByCurrUser) {
-      existingConversation.isDeletedBy =
-        existingConversation.isDeletedBy.filter(
-          (user) => user.toString() !== currUser._id
-        );
+      conversation.isDeletedBy = conversation.isDeletedBy.filter(
+        (user) => user.toString() !== currUser._id
+      );
 
-      await existingConversation.save();
+      await conversation.save();
     }
 
-    await existingConversation.populate([
+    await conversation.populate([
       {
         path: "participants",
         select: "_id username email avatar",
@@ -46,7 +46,7 @@ export const createConversation = Async(async (req, res, next) => {
       },
     ]);
 
-    res.status(200).json(existingConversation);
+    res.status(200).json(conversation);
   } else {
     const conversation = new Conversation({
       participants: [currUser._id, adressatUser._id],
@@ -121,10 +121,7 @@ export const deleteConversation = Async(async (req, res, next) => {
 
     await session.commitTransaction();
 
-    res.status(200).json({
-      message: "conversation is deleted",
-      conversation: conversationId,
-    });
+    res.status(200).json({ conversationId: conversationId });
   } catch (error) {
     await session.abortTransaction();
     return next(
@@ -226,6 +223,7 @@ export const getAllConversations = Async(async (req, res, next) => {
     .populate({
       path: "lastMessage",
       select: "-__v -isDeletedBy -updatedAt -conversation",
+      match: { isDeletedBy: { $nin: currUser._id } },
       populate: { path: "sender", select: "_id username email avatar" },
     });
 
