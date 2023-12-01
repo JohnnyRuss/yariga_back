@@ -4,7 +4,6 @@ interface ConversationT extends Document {
   createdAt: string;
   updatedAt: string;
   participants: Array<MongooseTypes.ObjectId>;
-  messages: Array<MongooseTypes.ObjectId>;
   isReadBy: Array<string>;
   isDeletedBy: Array<string>;
   lastMessage: MongooseTypes.ObjectId;

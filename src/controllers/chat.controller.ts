@@ -35,18 +35,16 @@ export const createConversation = Async(async (req, res, next) => {
         path: "participants",
         select: "_id username email avatar",
       },
-      {
-        path: "messages",
-        select: "-__v -isDeletedBy -updatedAt -conversation",
-        match: { isDeletedBy: { $nin: currUser._id } },
-        populate: {
-          path: "sender",
-          select: "_id username email avatar",
-        },
-      },
     ]);
 
-    res.status(200).json(conversation);
+    const messages = await Message.find({
+      conversation: conversation._id,
+      isDeletedBy: { $nin: currUser._id },
+    })
+      .select("-__v -isDeletedBy -updatedAt -conversation")
+      .populate({ path: "sender", select: "_id username email avatar" });
+
+    res.status(200).json({ ...conversation.toObject(), messages });
   } else {
     const conversation = new Conversation({
       participants: [currUser._id, adressatUser._id],
@@ -59,6 +57,7 @@ export const createConversation = Async(async (req, res, next) => {
 
     await conversation.save();
 
+    console.log(2);
     res.status(201).json(conversation);
   }
 });
@@ -88,40 +87,52 @@ export const deleteConversation = Async(async (req, res, next) => {
     if (!currUserIsParticipant)
       return next(new AppError(403, "You are not allowed for this operation"));
 
+    const adressatId = conversation.participants
+      .find((user) => user.toString() !== currUser._id)!
+      ._id.toString();
+
     // 2.0 Check if conversation is deleted by adressat even
     const isDeletedByAllOfTheUsers = conversation.participants.every((user) =>
       conversation.isDeletedBy.includes(user.toString())
     );
 
-    if (isDeletedByAllOfTheUsers) {
+    const messages = await Message.find({
+      conversation: conversationId,
+    }).session(session);
+
+    if (isDeletedByAllOfTheUsers || messages.length <= 0) {
       // 2.0 Delete Conversation PERMANENTLY if conversation is deleted by all of the users
 
       // 2.0.1 delete all of the  assets
-      const messages = await Message.find({
-        conversation: conversationId,
-      }).session(session);
+      if (messages.length > 0) {
+        const files = messages.flatMap((message) => message.files);
+        const media = messages.flatMap((message) => message.media);
 
-      const files = messages.flatMap((message) => message.files);
-      const media = messages.flatMap((message) => message.media);
-
-      // 2.0.2 delete messages
-      await Message.deleteMany({ conversation: conversationId }).session(
-        session
-      );
+        // 2.0.2 delete messages
+        await Message.deleteMany({ conversation: conversationId }).session(
+          session
+        );
+      }
 
       // 2.0.3 delete conversation itself
-      await Conversation.findByIdAndDelete(conversationId).session(session);
+      await conversation.deleteOne({ session });
+      // await Conversation.findByIdAndDelete(conversationId).session(session);
     } else {
       // 2.1.1 Update Conversation deletion for OnlySpecific User
       await Message.updateMany(
         { conversation: conversationId },
-        { $push: { isDeletedBy: currUser._id } }
+        { $addToSet: { isDeletedBy: currUser._id } }
       ).session(session);
+
+      await Message.deleteMany({
+        conversation: conversationId,
+        isDeletedBy: { $all: [currUser._id, adressatId] },
+      }).session(session);
     }
 
     await session.commitTransaction();
 
-    res.status(200).json({ conversationId: conversationId });
+    res.status(200).json({ conversationId });
   } catch (error) {
     await session.abortTransaction();
     return next(
@@ -141,71 +152,28 @@ export const getConversation = Async(async (req, res, next) => {
     isDeletedBy: { $nin: currUser._id },
     participants: { $in: currUser._id },
   })
-    .select("-isDeletedBy -__v -updatedAt -lastMessage")
+    .select("-isDeletedBy -__v -lastMessage")
     .populate({
       path: "participants",
       select: "_id username email avatar",
-    })
-    .populate({
-      path: "messages",
-      select: "-__v -isDeletedBy -updatedAt -conversation",
-      match: { isDeletedBy: { $nin: currUser._id } },
-      populate: {
-        path: "sender",
-        select: "_id username email avatar",
-      },
     });
 
   if (!conversation)
     return next(new AppError(404, "Conversation does not exists"));
 
-  res.status(200).json(conversation);
-});
-
-export const markConversationAsRead = Async(async (req, res, next) => {
-  const { conversationId } = req.params;
-  const currUser = req.user;
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const conversation = await Conversation.findByIdAndUpdate(conversationId, {
-      $addToSet: { isReadBy: currUser._id },
-    }).session(session);
-
-    if (!conversation)
-      return next(new AppError(404, "Conversation user does not exists"));
-
-    const currUserIsParticipant = conversation.participants.some(
-      (user) => user.toString() === currUser._id
-    );
-
-    if (!currUserIsParticipant)
-      return next(new AppError(403, "You are not allowed for this operation"));
-
-    await session.commitTransaction();
-
-    res.status(201).json("Conversation is marked as read");
-  } catch (error) {
-    await session.abortTransaction();
-
-    return next(
-      new AppError(
-        500,
-        "Internal server error. Can't mark conversation as read"
-      )
-    );
-  } finally {
-    await session.endSession();
+  if (!conversation.isReadBy.includes(currUser._id)) {
+    conversation.isReadBy.push(currUser._id);
+    await conversation.save();
   }
-});
 
-export const getConversationAssets = Async(async (req, res, next) => {
-  const { conversationId } = req.params;
-  const currUser = req.user;
+  const messages = await Message.find({
+    conversation: conversation._id,
+    isDeletedBy: { $nin: currUser._id },
+  })
+    .select("-__v -isDeletedBy -updatedAt -conversation")
+    .populate({ path: "sender", select: "_id username email avatar" });
 
-  res.status(201).json();
+  res.status(200).json({ ...conversation.toObject(), messages });
 });
 
 export const getAllConversations = Async(async (req, res, next) => {
@@ -215,7 +183,7 @@ export const getAllConversations = Async(async (req, res, next) => {
     isDeletedBy: { $nin: currUser._id },
     participants: { $in: currUser._id },
   })
-    .select("-isDeletedBy -__v -updatedAt -messages")
+    .select("-isDeletedBy -__v -createdAt")
     .populate({
       path: "participants",
       select: "_id username email avatar",
@@ -250,10 +218,13 @@ export const sendMessage = Async(async (req, res, next) => {
       select: "_id username email avatar",
     });
 
-    const conversation = await Conversation.findByIdAndUpdate(conversationId, {
-      $push: { messages: message._id },
-      $set: { isDeletedBy: [], isReadBy: [], lastMessage: message._id },
-    }).session(session);
+    const conversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $set: { isDeletedBy: [], isReadBy: [], lastMessage: message._id },
+      },
+      { new: true }
+    ).session(session);
 
     if (!conversation)
       return next(new AppError(404, "Conversation user does not exists"));
@@ -269,19 +240,26 @@ export const sendMessage = Async(async (req, res, next) => {
 
     await session.commitTransaction();
 
+    const newMessage = {
+      sender: message.sender,
+      text: message.text,
+      links: message.links,
+      files: message.files,
+      media: message.media,
+      _id: message._id,
+      createdAt: message.createdAt,
+    };
+
+    const updatedConversation = {
+      isReadBy: [],
+      lastMessage: message,
+      _id: conversation._id,
+      updatedAt: conversation.updatedAt,
+    };
+
     res.status(201).json({
-      conversation: {
-        isReadBy: [],
-      },
-      message: {
-        sender: message.sender,
-        text: message.text,
-        links: message.links,
-        files: message.files,
-        media: message.media,
-        _id: message._id,
-        createdAt: message.createdAt,
-      },
+      message: newMessage,
+      conversation: updatedConversation,
     });
   } catch (error) {
     session.abortTransaction();
@@ -289,6 +267,63 @@ export const sendMessage = Async(async (req, res, next) => {
   } finally {
     session.endSession();
   }
+});
+
+export const markConversationAsRead = Async(async (req, res, next) => {
+  const { conversationId } = req.params;
+  const { read } = req.query;
+  const currUser = req.user;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const queryObject: { [key: string]: { [key: string]: string } } = {};
+  read === "1"
+    ? (queryObject["$addToSet"] = { isReadBy: currUser._id })
+    : (queryObject["$pull"] = { isReadBy: currUser._id });
+
+  try {
+    const conversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      queryObject,
+      { new: true }
+    ).session(session);
+
+    if (!conversation)
+      return next(new AppError(404, "Conversation user does not exists"));
+
+    const currUserIsParticipant = conversation.participants.some(
+      (user) => user.toString() === currUser._id
+    );
+
+    if (!currUserIsParticipant)
+      return next(new AppError(403, "You are not allowed for this operation"));
+
+    await session.commitTransaction();
+
+    res.status(201).json({
+      conversationId: conversation._id,
+      isReadBy: conversation.isReadBy,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+
+    return next(
+      new AppError(
+        500,
+        "Internal server error. Can't mark conversation as read"
+      )
+    );
+  } finally {
+    await session.endSession();
+  }
+});
+
+export const getConversationAssets = Async(async (req, res, next) => {
+  const { conversationId } = req.params;
+  const currUser = req.user;
+
+  res.status(201).json();
 });
 
 export const deleteMessage = Async(async (req, res, next) => {
