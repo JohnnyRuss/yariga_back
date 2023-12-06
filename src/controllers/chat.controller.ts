@@ -200,7 +200,7 @@ export const getAllConversations = Async(async (req, res, next) => {
 
 export const sendMessage = Async(async (req, res, next) => {
   const { conversationId } = req.params;
-  const { text, links } = req.body;
+  const { text, links, images } = req.body;
   const currUser = req.user;
 
   const session = await mongoose.startSession();
@@ -210,6 +210,7 @@ export const sendMessage = Async(async (req, res, next) => {
     const message = new Message({
       text: text || "",
       links: links || [],
+      media: images || [],
       sender: currUser._id,
       conversation: conversationId,
     });
