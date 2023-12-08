@@ -325,7 +325,25 @@ export const getConversationAssets = Async(async (req, res, next) => {
   const { conversationId } = req.params;
   const currUser = req.user;
 
-  res.status(201).json();
+  if (!conversationId)
+    return next(new AppError(400, "please provide us conversation id"));
+
+  const messages = await Message.find({
+    conversation: conversationId,
+    isDeletedBy: { $nin: currUser._id },
+  }).sort({ createdAt: -1 });
+
+  const conversationAssets: { media: Array<string>; links: Array<string> } = {
+    media: [],
+    links: [],
+  };
+
+  messages.forEach((message) => {
+    conversationAssets.media = [...conversationAssets.media, ...message.media];
+    conversationAssets.links = [...conversationAssets.links, ...message.links];
+  });
+
+  res.status(201).json(conversationAssets);
 });
 
 export const deleteMessage = Async(async (req, res, next) => {
