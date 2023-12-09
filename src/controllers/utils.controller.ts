@@ -1,4 +1,4 @@
-import { Async } from "../lib";
+import { AppError, Async } from "../lib";
 
 import metascraper from "metascraper";
 import metascraperAuthor from "metascraper-author";
@@ -45,4 +45,34 @@ export const getMeta = Async(async (req, res, next) => {
   const sc = await scraper(content);
 
   res.status(200).json(sc);
+});
+
+export const getMultipleMeta = Async(async (req, res, next) => {
+  const { urls } = req.body;
+
+  const isArray = Array.isArray(urls);
+
+  if (!isArray || (isArray && !urls[0]))
+    return next(new AppError(400, "please provide us urls"));
+
+  const allMeta = await Promise.all(
+    urls.map(async (url) => {
+      const getContent = async () => {
+        // create a browser context inside the main Chromium process
+        const context = browser.createContext();
+        const promise = getHTML(url, { getBrowserless: () => context });
+        // close browser resources before return the result
+        promise
+          .then(() => context)
+          .then((browser: any) => browser.destroyContext());
+
+        return promise;
+      };
+
+      const content = await getContent();
+      return await scraper(content);
+    })
+  );
+
+  res.status(200).json(allMeta);
 });
