@@ -73,6 +73,12 @@ const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>(
       type: String,
       select: false,
     },
+
+    role: {
+      type: String,
+      enum: ["AGENT", "USER"],
+      default: "USER",
+    },
   },
   { timestamps: true }
 );

@@ -38,9 +38,14 @@ class API_Features<
     return this;
   }
 
-  async countDocuments() {
+  async countDocuments(manualLimit?: number) {
     const { limit } = this.query;
-    const paginationLimit = limit ? Number(limit) : 10;
+
+    const paginationLimit = limit
+      ? Number(limit)
+      : manualLimit
+      ? manualLimit
+      : 10;
 
     const docsCount = await this.dbQueryClone.countDocuments();
     const count = Math.ceil(docsCount / paginationLimit);

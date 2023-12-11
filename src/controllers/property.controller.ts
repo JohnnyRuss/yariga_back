@@ -653,7 +653,7 @@ export const getProperty = Async(async (req, res, next) => {
     .populate({ path: "owner", select: "-__v" })
     .populate({
       path: "agent",
-      select: "serviceArea username email avatar phone listing",
+      select: "serviceArea username email avatar phone listing account",
     })
     .populate({ path: "propertyType", select: "-__v" })
     .populate({ path: "rooms", select: "-__v" })

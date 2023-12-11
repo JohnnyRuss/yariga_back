@@ -133,6 +133,11 @@ const AgentSchema = new Schema<AgentT, AgentModelT, AgentMethodsT>({
     },
   },
 
+  account: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+  },
+
   listing: [{ type: Schema.Types.ObjectId, ref: "Property" }],
 });
 

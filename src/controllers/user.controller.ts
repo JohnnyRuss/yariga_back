@@ -1,5 +1,5 @@
 import { Async, AppError } from "../lib";
-import { User } from "../models";
+import { User, Agent } from "../models";
 
 import {
   CLOUDINARY_CLOUD_NAME,
@@ -9,6 +9,7 @@ import {
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { USER_DEFAULT_AVATAR } from "../config/config";
+import { getAllAgents } from "./agent.controller";
 
 cloudinary.config({
   cloud_name: CLOUDINARY_CLOUD_NAME,

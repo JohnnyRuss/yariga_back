@@ -25,6 +25,7 @@ export interface AgentT extends Document {
     agencyLicense: string;
   };
   listing: Array<MongooseTypes.ObjectId>;
+  account: MongooseTypes.ObjectId;
   serviceArea: {
     name: string;
     displayName: string;

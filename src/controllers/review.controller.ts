@@ -68,7 +68,7 @@ export const getOwnerReviews = Async(async (req, res, next) => {
   );
 
   const reviews = await reviewsQuery
-    .paginate(1)
+    .paginate()
     .getQuery()
     .populate({ path: "user", select: "avatar createdAt username" })
     .populate({ path: "property", select: "title propertyStatus price" });

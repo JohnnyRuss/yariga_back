@@ -31,6 +31,7 @@ export const googleLogin = Async(async (req, res, next) => {
     avatar: user.avatar,
     phone: user.phone,
     location: user.location,
+    role: user.role,
   };
 
   res.status(201).json({ user: userData, accessToken });
@@ -66,6 +67,7 @@ export const signUp = Async(async (req, res, next) => {
     avatar: newUser.avatar,
     phone: newUser.phone,
     location: newUser.location,
+    role: newUser.role,
   };
 
   res.status(201).json({ user: userData, accessToken });
@@ -101,6 +103,7 @@ export const signIn = Async(async (req, res, next) => {
     avatar: user.avatar,
     phone: user.phone,
     location: user.location,
+    role: user.role,
   };
 
   res.status(201).json({ user: userData, accessToken });

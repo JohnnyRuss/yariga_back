@@ -16,6 +16,7 @@ export interface UserT extends Document {
     lat?: string;
     lon?: string;
   };
+  role: "USER" | "AGENT";
   avatar: string;
   password: string;
   confirmEmailPin: string;
