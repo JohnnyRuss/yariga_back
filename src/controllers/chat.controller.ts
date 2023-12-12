@@ -33,7 +33,7 @@ export const createConversation = Async(async (req, res, next) => {
     await conversation.populate([
       {
         path: "participants",
-        select: "_id username email avatar",
+        select: "_id username email avatar role",
       },
     ]);
 
@@ -42,7 +42,7 @@ export const createConversation = Async(async (req, res, next) => {
       isDeletedBy: { $nin: currUser._id },
     })
       .select("-__v -isDeletedBy -updatedAt -conversation")
-      .populate({ path: "sender", select: "_id username email avatar" });
+      .populate({ path: "sender", select: "_id username email avatar role" });
 
     res.status(200).json({
       _id: conversation._id,
@@ -59,7 +59,7 @@ export const createConversation = Async(async (req, res, next) => {
 
     conversation.populate({
       path: "participants",
-      select: "_id username email avatar",
+      select: "_id username email avatar role",
     });
 
     await conversation.save();
@@ -166,7 +166,7 @@ export const getConversation = Async(async (req, res, next) => {
     .select("-isDeletedBy -__v -lastMessage")
     .populate({
       path: "participants",
-      select: "_id username email avatar",
+      select: "_id username email avatar role",
     });
 
   if (!conversation)
@@ -182,7 +182,7 @@ export const getConversation = Async(async (req, res, next) => {
     isDeletedBy: { $nin: currUser._id },
   })
     .select("-__v -isDeletedBy -updatedAt -conversation")
-    .populate({ path: "sender", select: "_id username email avatar" });
+    .populate({ path: "sender", select: "_id username email avatar role" });
 
   res.status(200).json({ ...conversation.toObject(), messages });
 });
@@ -198,13 +198,13 @@ export const getAllConversations = Async(async (req, res, next) => {
     .sort({ updatedAt: -1 })
     .populate({
       path: "participants",
-      select: "_id username email avatar",
+      select: "_id username email avatar role",
     })
     .populate({
       path: "lastMessage",
       select: "-__v -isDeletedBy -updatedAt -conversation",
       match: { isDeletedBy: { $nin: currUser._id } },
-      populate: { path: "sender", select: "_id username email avatar" },
+      populate: { path: "sender", select: "_id username email avatar role" },
     });
 
   res.status(200).json(conversations);
@@ -229,7 +229,7 @@ export const sendMessage = Async(async (req, res, next) => {
 
     await message.populate({
       path: "sender",
-      select: "_id username email avatar",
+      select: "_id username email avatar role",
     });
 
     const conversation = await Conversation.findByIdAndUpdate(

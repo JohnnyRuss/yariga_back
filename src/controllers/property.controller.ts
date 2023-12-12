@@ -370,6 +370,7 @@ export const getAllProperties = Async(async (req, res, next) => {
               username: 1,
               email: 1,
               avatar: 1,
+              role: 1,
             },
           },
         ],
