@@ -15,7 +15,7 @@ export const createConversation = Async(async (req, res, next) => {
   // 2.0 check if conversation with same participants already exists
   const conversation = await Conversation.findOne({
     participants: { $all: [currUser._id, adressat] },
-  });
+  }).select("-__v -createdAt");
 
   if (conversation) {
     const conversationIsDeletedByCurrUser = conversation.isDeletedBy.includes(
@@ -44,7 +44,14 @@ export const createConversation = Async(async (req, res, next) => {
       .select("-__v -isDeletedBy -updatedAt -conversation")
       .populate({ path: "sender", select: "_id username email avatar" });
 
-    res.status(200).json({ ...conversation.toObject(), messages });
+    res.status(200).json({
+      _id: conversation._id,
+      participants: conversation.participants,
+      isReadBy: conversation.isReadBy,
+      updatedAt: conversation.updatedAt,
+      lastMessage: conversation.lastMessage,
+      messages,
+    });
   } else {
     const conversation = new Conversation({
       participants: [currUser._id, adressatUser._id],
@@ -57,8 +64,12 @@ export const createConversation = Async(async (req, res, next) => {
 
     await conversation.save();
 
-    console.log(2);
-    res.status(201).json(conversation);
+    res.status(201).json({
+      _id: conversation._id,
+      participants: conversation.participants,
+      isReadBy: conversation.isReadBy,
+      updatedAt: conversation.updatedAt,
+    });
   }
 });
 
@@ -184,6 +195,7 @@ export const getAllConversations = Async(async (req, res, next) => {
     participants: { $in: currUser._id },
   })
     .select("-isDeletedBy -__v -createdAt")
+    .sort({ updatedAt: -1 })
     .populate({
       path: "participants",
       select: "_id username email avatar",

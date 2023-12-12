@@ -106,3 +106,15 @@ export const updateProfileImage = Async(async (req, res, next) => {
 
   res.status(201).json({ url: secure_url });
 });
+
+export const searchUsers = Async(async (req, res, next) => {
+  const { search } = req.query;
+
+  const searchRegex = new RegExp(search as string, "i");
+
+  const users = await User.find({
+    $or: [{ username: searchRegex }, { email: searchRegex }],
+  }).select("username email avatar _id role");
+
+  res.status(200).json(users);
+});

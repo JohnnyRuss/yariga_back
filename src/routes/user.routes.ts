@@ -4,6 +4,8 @@ import { checkAuth } from "../middlewares";
 
 const Router = ExpressRouter();
 
+Router.route("/search").get(checkAuth, userController.searchUsers);
+
 Router.route("/:userId")
   .get(checkAuth, userController.getUserDetails)
   .put(checkAuth, userController.updateUser);
