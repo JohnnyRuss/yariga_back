@@ -63,7 +63,7 @@ export const hireAgent = Async(async (req, res, next) => {
   if (!agent || !property)
     return next(new AppError(404, "Agent or Property does not exists"));
 
-  session.commitTransaction();
+  await session.commitTransaction();
 
   res.status(201).json(agent);
 });
@@ -96,7 +96,7 @@ export const fireAgent = Async(async (req, res, next) => {
   if (!agent || !property)
     return next(new AppError(404, "Agent or Property does not exists"));
 
-  session.commitTransaction();
+  await session.commitTransaction();
 
   res.status(201).json(agent);
 });

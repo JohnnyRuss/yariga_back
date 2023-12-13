@@ -1,21 +1,10 @@
-import { Async, AppError } from "../lib";
-import { User, Agent } from "../models";
+import mongoose from "mongoose";
+import { Async, AppError, Cloudinary } from "../lib";
+import { User, Conversation, Review } from "../models";
 
-import {
-  CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET,
-} from "../config/env";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import * as factory from "./handler.factory";
 import { USER_DEFAULT_AVATAR } from "../config/config";
-import { getAllAgents } from "./agent.controller";
-
-cloudinary.config({
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET,
-});
 
 export const fileUpload = multer({
   storage: multer.memoryStorage(),
@@ -75,7 +64,7 @@ export const updateProfileImage = Async(async (req, res, next) => {
   const base64 = Buffer.from(file.buffer).toString("base64");
   let dataURI = `data:${file.mimetype};base64,${base64}`;
 
-  const { secure_url } = await cloudinary.uploader.upload(dataURI, {
+  const { secure_url } = await Cloudinary.uploader.upload(dataURI, {
     resource_type: "image",
     folder: "users",
     format: "webp",
@@ -96,7 +85,7 @@ export const updateProfileImage = Async(async (req, res, next) => {
 
     const imagePublicId = generatePublicIds(user.avatar);
 
-    await cloudinary.api.delete_resources([imagePublicId], {
+    await Cloudinary.api.delete_resources([imagePublicId], {
       resource_type: "image",
     });
   }
@@ -117,4 +106,69 @@ export const searchUsers = Async(async (req, res, next) => {
   }).select("username email avatar _id role");
 
   res.status(200).json(users);
+});
+
+export const deleteUser = Async(async (req, res, next) => {
+  const { userId } = req.params;
+  const currUser = req.user;
+
+  if (currUser._id !== userId)
+    return next(new AppError(403, "You are not allowed for this operation"));
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const user = await User.findByIdAndDelete(userId).session(session);
+
+    if (!user || (user && user.role === "AGENT"))
+      return next(new AppError(403, "You are not allowed for this operation"));
+
+    const userConversations = await Conversation.find({
+      participants: userId,
+      isDeletedBy: { $nin: userId },
+    }).select("_id");
+
+    const userProperties = user.properties.map((propertyId) =>
+      propertyId.toString()
+    );
+
+    const userConversationIds = userConversations.map((conversation) =>
+      conversation._id.toString()
+    );
+
+    // 1. delete user conversations,messages and message assets
+    await Promise.all(
+      userConversationIds.map(async (conversationId) => {
+        await factory.deleteConversation(
+          conversationId,
+          currUser,
+          next,
+          session
+        );
+      })
+    );
+
+    // 2. delete user properties and remove these properties from Agents listing
+    //    and delete reviews on user properties
+    await Promise.all(
+      userProperties.map(async (propertyId) => {
+        await factory.deleteConversation(propertyId, currUser, next, session);
+      })
+    );
+
+    // 3. delete user written reviews
+    await Review.deleteMany({ user: userId });
+
+    await session.commitTransaction();
+
+    res.clearCookie("Authorization");
+
+    res.status(204).json("user is deleted");
+  } catch (error) {
+    await session.abortTransaction();
+    return next(new AppError(400, "Failed to delete user"));
+  } finally {
+    await session.endSession();
+  }
 });

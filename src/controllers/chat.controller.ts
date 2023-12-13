@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Async, AppError } from "../lib";
 import { Conversation, Message, User } from "../models";
+import * as factory from "./handler.factory";
 
 export const createConversation = Async(async (req, res, next) => {
   const { adressat } = req.body;
@@ -81,68 +82,8 @@ export const deleteConversation = Async(async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const conversation = await Conversation.findByIdAndUpdate(
-      conversationId,
-      { $addToSet: { isDeletedBy: currUser._id } },
-      { new: true }
-    ).session(session);
-
-    if (!conversation)
-      return next(new AppError(404, "Conversation user does not exists"));
-
-    // 1.0 Check if currUser is conversation Participant
-    const currUserIsParticipant = conversation.participants.some(
-      (user) => user.toString() === currUser._id
-    );
-
-    if (!currUserIsParticipant)
-      return next(new AppError(403, "You are not allowed for this operation"));
-
-    const adressatId = conversation.participants
-      .find((user) => user.toString() !== currUser._id)!
-      ._id.toString();
-
-    // 2.0 Check if conversation is deleted by adressat even
-    const isDeletedByAllOfTheUsers = conversation.participants.every((user) =>
-      conversation.isDeletedBy.includes(user.toString())
-    );
-
-    const messages = await Message.find({
-      conversation: conversationId,
-    }).session(session);
-
-    if (isDeletedByAllOfTheUsers || messages.length <= 0) {
-      // 2.0 Delete Conversation PERMANENTLY if conversation is deleted by all of the users
-
-      // 2.0.1 delete all of the  assets
-      if (messages.length > 0) {
-        const files = messages.flatMap((message) => message.files);
-        const media = messages.flatMap((message) => message.media);
-
-        // 2.0.2 delete messages
-        await Message.deleteMany({ conversation: conversationId }).session(
-          session
-        );
-      }
-
-      // 2.0.3 delete conversation itself
-      await conversation.deleteOne({ session });
-      // await Conversation.findByIdAndDelete(conversationId).session(session);
-    } else {
-      // 2.1.1 Update Conversation deletion for OnlySpecific User
-      await Message.updateMany(
-        { conversation: conversationId },
-        { $addToSet: { isDeletedBy: currUser._id } }
-      ).session(session);
-
-      await Message.deleteMany({
-        conversation: conversationId,
-        isDeletedBy: { $all: [currUser._id, adressatId] },
-      }).session(session);
-    }
-
+    await factory.deleteConversation(conversationId, currUser, next, session);
     await session.commitTransaction();
-
     res.status(200).json({ conversationId });
   } catch (error) {
     await session.abortTransaction();
@@ -276,10 +217,10 @@ export const sendMessage = Async(async (req, res, next) => {
       conversation: updatedConversation,
     });
   } catch (error) {
-    session.abortTransaction();
+    await session.abortTransaction();
     return next(new AppError(500, "Internal server error.Can't send message"));
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 });
 
