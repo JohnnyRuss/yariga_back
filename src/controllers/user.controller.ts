@@ -110,18 +110,29 @@ export const searchUsers = Async(async (req, res, next) => {
 
 export const deleteUser = Async(async (req, res, next) => {
   const { userId } = req.params;
+  const { password } = req.body;
   const currUser = req.user;
 
-  if (currUser._id !== userId)
+  if (currUser._id !== userId || !password)
     return next(new AppError(403, "You are not allowed for this operation"));
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const user = await User.findByIdAndDelete(userId).session(session);
+    const user = await User.findByIdAndDelete(userId)
+      .select("+password")
+      .session(session);
 
     if (!user || (user && user.role === "AGENT"))
+      return next(new AppError(403, "You are not allowed for this operation"));
+
+    const isValidPassword = await user.checkPassword(
+      password as string,
+      user.password
+    );
+
+    if (!isValidPassword)
       return next(new AppError(403, "You are not allowed for this operation"));
 
     const userConversations = await Conversation.find({
@@ -137,32 +148,38 @@ export const deleteUser = Async(async (req, res, next) => {
       conversation._id.toString()
     );
 
-    // 1. delete user conversations,messages and message assets
-    await Promise.all(
-      userConversationIds.map(async (conversationId) => {
-        await factory.deleteConversation(
-          conversationId,
-          currUser,
-          next,
-          session
-        );
-      })
-    );
+    try {
+      await Promise.all([
+        // 1. delete user conversations,messages and message assets
+        await Promise.all(
+          userConversationIds.map(async (conversationId) => {
+            await factory.deleteConversation(
+              conversationId,
+              currUser,
+              next,
+              session
+            );
+          })
+        ),
 
-    // 2. delete user properties and remove these properties from Agents listing
-    //    and delete reviews on user properties
-    await Promise.all(
-      userProperties.map(async (propertyId) => {
-        await factory.deleteConversation(propertyId, currUser, next, session);
-      })
-    );
+        // 2. delete user properties and remove these properties from Agents listing
+        //    and delete reviews on user properties
+        await Promise.all(
+          userProperties.map(async (propertyId) => {
+            await factory.deleteProperty(propertyId, currUser, next, session);
+          })
+        ),
 
-    // 3. delete user written reviews
-    await Review.deleteMany({ user: userId });
-
-    await session.commitTransaction();
+        // 3. delete user written reviews
+        await Review.deleteMany({ user: userId }).session(session),
+      ]);
+    } catch (error) {
+      throw new Error("Failed to delete user documents");
+    }
 
     res.clearCookie("Authorization");
+
+    await session.commitTransaction();
 
     res.status(204).json("user is deleted");
   } catch (error) {

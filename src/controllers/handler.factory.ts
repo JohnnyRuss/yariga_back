@@ -42,9 +42,9 @@ export async function deleteConversation(
   if (!currUserIsParticipant)
     return next(new AppError(403, "You are not allowed for this operation"));
 
-  const adressatId = conversation.participants
-    .find((user) => user.toString() !== currUser._id)!
-    ._id.toString();
+  const adressatId = conversation.participants.find(
+    (user) => user.toString() !== currUser._id
+  );
 
   // 2.0 Check if conversation is deleted by adressat even
   const isDeletedByAllOfTheUsers = conversation.participants.every((user) =>
@@ -60,15 +60,16 @@ export async function deleteConversation(
 
     // 2.0.1 delete all of the  assets
     if (messages.length > 0) {
-      const files = messages.flatMap((message) => message.files);
+      // const files = messages.flatMap((message) => message.files);
 
       const imagePublicIds = messages
         .flatMap((message) => message.media)
         .map((image) => generatePublicIds(image));
 
-      await Cloudinary.api.delete_resources(imagePublicIds, {
-        resource_type: "image",
-      });
+      if (imagePublicIds.length > 0)
+        await Cloudinary.api.delete_resources(imagePublicIds, {
+          resource_type: "image",
+        });
 
       // 2.0.2 delete messages
       await Message.deleteMany({ conversation: conversationId }).session(
