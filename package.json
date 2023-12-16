@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "compile": "tsc -p .",
     "start": "node ./build/server.js",
+    "compile:pug": "pug src/views -o build/views",
+    "copy:css": "copyfiles -u 3 src/public/css/* build/public/css",
+    "copy:assets": "copyfiles -u 3 src/public/assets/* build/public/assets",
+    "build": "npm run copy:assets && npm run copy:css && npm run compile && npm run start",
     "watch": "nodemon --exec ts-node --files ./src/server.ts",
-    "compile": "tsc",
-    "build": "npm run compile && npm run start",
-    "start:dev": "concurrently \"npm:watch\" \"npm:build:dev\"",
-    "build:dev": "npm run compile"
+    "start:dev": "concurrently \"npm:watch\" \"npm:compile\""
   },
   "keywords": [],
   "author": "",
@@ -24,14 +26,18 @@
     "@types/multer": "^1.4.9",
     "@types/node": "^20.8.5",
     "concurrently": "^8.2.1",
+    "copyfiles": "^2.4.1",
     "morgan": "^1.10.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@types/nodemailer": "^6.4.14",
+    "@types/pug": "^2.0.10",
     "bcrypt": "^5.1.1",
     "browserless": "^10.2.0",
     "cloudinary": "^1.41.0",
+    "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -49,6 +55,8 @@
     "metascraper-url": "^5.39.0",
     "mongoose": "^7.6.2",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "pug": "^3.0.2",
     "puppeteer": "^21.5.2"
   }
 }

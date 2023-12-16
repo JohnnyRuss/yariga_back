@@ -1,6 +1,7 @@
-import { Async, AppError, JWT } from "../lib";
-import { User } from "../models";
 import crypto from "crypto";
+import { User } from "../models";
+import { Async, AppError, JWT, Email } from "../lib";
+import { NODE_MODE } from "../config/env";
 
 export const googleLogin = Async(async (req, res, next) => {
   const { email, avatar, username } = req.body;
@@ -126,10 +127,11 @@ export const forgotPassword = Async(async (req, res, next) => {
 
   const pin = await user.createConfirmEmailPin();
 
-  // await new Email({ adressat: user.email }).sendConfirmEmailPin({
-  //   pin,
-  //   userName: user.fullname || user.username,
-  // });
+  await Email.sendForgotPasswordPin({
+    to: email,
+    pin: +pin,
+    username: user.username,
+  });
 
   res.status(201).json({ emailIsSent: true });
 });
@@ -150,11 +152,11 @@ export const confirmEmail = Async(async (req, res, next) => {
 
   const isExpired = Date.now() > new Date(user.emailPinResetAt!).getTime();
 
-  user.confirmEmailPin = "";
-  user.emailPinResetAt = "";
-
   if (isExpired)
     return next(new AppError(403, "token is invalid or is expired."));
+
+  user.confirmEmailPin = "";
+  user.emailPinResetAt = "";
 
   await user.save();
 
@@ -166,7 +168,7 @@ export const confirmEmail = Async(async (req, res, next) => {
     sameSite: false,
   };
 
-  // if (NODE_MODE === "PROD") cookieOptions.secure = true;
+  if (NODE_MODE === "PROD") cookieOptions.secure = true;
 
   res.cookie("password_reset_token", passwordResetToken, cookieOptions);
 
@@ -194,8 +196,6 @@ export const updatePassword = Async(async (req, res, next) => {
 
   if (!password_reset_token) return err();
 
-  res.clearCookie("password_reset_token");
-
   const hashedToken = crypto
     .createHash("sha256")
     .update(password_reset_token.toString() || "")
@@ -205,12 +205,14 @@ export const updatePassword = Async(async (req, res, next) => {
 
   if (!user) return err();
 
+  res.clearCookie("password_reset_token");
+
   const isExpired = Date.now() > new Date(user.passwordResetAt!).getTime();
+
+  if (isExpired) return err();
 
   user.passwordResetToken = "";
   user.passwordResetAt = "";
-
-  if (isExpired) return err();
 
   user.password = password;
 
