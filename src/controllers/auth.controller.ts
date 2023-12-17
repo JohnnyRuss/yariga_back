@@ -10,12 +10,15 @@ export const googleLogin = Async(async (req, res, next) => {
 
   let user = existingUser;
 
-  if (!user)
+  if (!user) {
     user = await User.create({
       username,
       email,
       avatar,
     });
+
+    await Email.sendWelcome({ to: email, username: username });
+  }
 
   const { accessToken } = JWT.assignToken({
     signature: {
@@ -71,6 +74,8 @@ export const signUp = Async(async (req, res, next) => {
     role: newUser.role,
   };
 
+  await Email.sendWelcome({ to: email, username: username });
+
   res.status(201).json({ user: userData, accessToken });
 });
 
@@ -120,7 +125,7 @@ export const forgotPassword = Async(async (req, res, next) => {
 
   if (!email) return next(new AppError(403, "please enter your email"));
 
-  const user = await User.findOne({ email, authByGoogle: false });
+  const user = await User.findOne({ email });
 
   if (!user)
     return next(new AppError(403, "user with this email does not exists"));
@@ -144,7 +149,10 @@ export const confirmEmail = Async(async (req, res, next) => {
       new AppError(403, "please provide us the PIN sent to your Email")
     );
 
-  const hashedToken = crypto.createHash("sha256").update(pin).digest("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(pin.toString())
+    .digest("hex");
 
   const user = await User.findOne({ confirmEmailPin: hashedToken });
 
@@ -178,8 +186,6 @@ export const confirmEmail = Async(async (req, res, next) => {
 export const updatePassword = Async(async (req, res, next) => {
   const { password_reset_token }: any = req.cookies;
   const { password, confirm_password } = req.body;
-
-  console.log({ line: 1, password_reset_token });
 
   if (!password || !confirm_password || password !== confirm_password)
     return next(
@@ -219,8 +225,6 @@ export const updatePassword = Async(async (req, res, next) => {
   await user.save();
 
   user.password = "";
-
-  console.log({ line: 2, password_reset_token });
 
   res.status(201).json({ passwordIsUpdated: true });
 });

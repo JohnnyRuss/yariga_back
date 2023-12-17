@@ -106,9 +106,63 @@ body {
 
 /* WELCOME */
 
-.welcome__msg {
-  font-size: 26px;
-  color: #2ed480;
-  font-weight: 700;
-  letter-spacing: 2px;
+.things {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.things__list {
+  list-style: none;
+}
+
+.things__list-item {
+  display: flex;
+  flex-direction: column;
+  gap: "12px";
+}
+
+.things__list-item:not(:first-child) {
+  margin-top: 12px;
+}
+
+.things__list-item--head {
+  font-weight: 600;
+}
+
+.things__list-item--msg {
+  font-style: italic;
+  font-size: 14px;
+  margin-top: 5px;
+  padding-left: 12px;
+  color: #333;
+}
+
+.epilog {
+  color: #333;
+  font-weight: 500;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+
+.regards {
+  color: #333;
+  text-align: end;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* DELETE ACCOUNT */
+
+.address {
+  font-weight: 500;
+  width: 100%;
+}
+
+.deletion-msg {
+  color: #333;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
 }

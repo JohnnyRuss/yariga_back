@@ -1,10 +1,19 @@
 import App from "./app";
-import { PORT, DB_APP_CONNECTION } from "./config/env";
+import { PORT, DB_APP_CONNECTION, APP_ORIGINS } from "./config/env";
 
 import mongoose from "mongoose";
 import { createServer } from "http";
+import { Server as IOServer } from "socket.io";
 
 const SERVER = createServer(App);
+
+export const io = new IOServer(SERVER, {
+  allowEIO3: true,
+  cors: { credentials: true, origin: APP_ORIGINS as Array<string> },
+});
+
+App.set("socket", io);
+require("./socket.ts");
 
 process.on("uncaughtException", (error) => {
   console.log(

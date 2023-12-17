@@ -12,7 +12,10 @@ import {
 } from "../config/env";
 import nodemailer from "nodemailer";
 import pug from "pug";
-import { SendForgotPasswordPinArgsT } from "../types/lib/email.types";
+import {
+  SendForgotPasswordPinArgsT,
+  SendWelcomeArgsT,
+} from "../types/lib/email.types";
 
 export class Email {
   MAILER_SERVICE: string = "";
@@ -44,14 +47,38 @@ export class Email {
     });
   }
 
-  async sendWelcome() {
-    await this.transporter().sendMail({
-      from: "Yariga",
-      to: "Client",
-      subject: "Welcome",
-      text: "Welcome to Yariga",
-      html: pug.renderFile("welcome.pug"),
-    });
+  async sendWelcome(args: SendWelcomeArgsT) {
+    try {
+      await this.transporter().sendMail({
+        from: "Yariga",
+        to: args.to,
+        subject: "Welcome to Yariga",
+        html: pug.renderFile(this.generateDirPath("welcome"), {
+          username: this.generateUppercaseUsername(args.username),
+          subHead: `Dear ${this.generateUppercaseUsername(
+            args.username
+          )} Welcome to Yariga! We're thrilled to have you on board. Thank you for choosing us.`,
+        }),
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async sendDeleteAccount(args: SendWelcomeArgsT) {
+    try {
+      await this.transporter().sendMail({
+        from: "Yariga",
+        to: args.to,
+        subject: "Yariga Account Deletion Confirmation",
+        html: pug.renderFile(this.generateDirPath("deleteAccount"), {
+          username: this.generateUppercaseUsername(args.username),
+          subHead: `Account Deletion`,
+        }),
+      });
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async sendForgotPasswordPin(args: SendForgotPasswordPinArgsT) {
@@ -60,14 +87,28 @@ export class Email {
         from: "Yariga",
         to: args.to,
         subject: "Yariga Forgot Password",
-        html: pug.renderFile(`${__dirname}/../views/forgotPassword.pug`, {
-          username: args.username,
+        html: pug.renderFile(this.generateDirPath("forgotPassword"), {
+          username: this.generateUppercaseUsername(args.username),
           pin: args.pin,
+          subHead: "Forgot Password",
         }),
       });
     } catch (error) {
       console.log(error);
     }
+  }
+
+  generateDirPath(filename: string) {
+    return `${__dirname}/../views/${filename}.pug`;
+  }
+
+  generateUppercaseUsername(username: string) {
+    return username
+      .split(" ")
+      .map((fragment) =>
+        fragment[0].toLocaleUpperCase().concat(fragment.slice(1))
+      )
+      .join(" ");
   }
 }
 

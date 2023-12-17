@@ -34,6 +34,7 @@
   "dependencies": {
     "@types/nodemailer": "^6.4.14",
     "@types/pug": "^2.0.10",
+    "@types/socket.io": "^3.0.2",
     "bcrypt": "^5.1.1",
     "browserless": "^10.2.0",
     "cloudinary": "^1.41.0",
@@ -57,6 +58,7 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "pug": "^3.0.2",
-    "puppeteer": "^21.5.2"
+    "puppeteer": "^21.5.2",
+    "socket.io": "^4.7.2"
   }
 }

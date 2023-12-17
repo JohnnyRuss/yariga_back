@@ -42,7 +42,10 @@ App.use("/api/v1/chat", chatRoutes);
 App.use("/api/v1/utils", utilsRoutes);
 
 App.get("/views", async (req, res, next) => {
-  res.status(200).render("forgotPassword", { username: "John" });
+  res.status(200).render("welcome", {
+    username: "russ",
+    subHead: "Welcome Test",
+  });
 });
 
 App.all("*", (req: Request, _, next: NextFunction) => {

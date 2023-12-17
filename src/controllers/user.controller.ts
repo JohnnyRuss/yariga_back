@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Async, AppError, Cloudinary } from "../lib";
+import { Async, AppError, Cloudinary, Email } from "../lib";
 import { User, Conversation, Review } from "../models";
 
 import multer from "multer";
@@ -178,6 +178,8 @@ export const deleteUser = Async(async (req, res, next) => {
     }
 
     res.clearCookie("Authorization");
+
+    await Email.sendDeleteAccount({ to: user.email, username: user.username });
 
     await session.commitTransaction();
 

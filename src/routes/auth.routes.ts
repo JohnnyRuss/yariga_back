@@ -14,4 +14,9 @@ Router.route("/refresh").post(authController.refresh);
 
 Router.route("/logout").post(checkAuth, authController.logout);
 
+Router.route("/forgot-password")
+  .patch(authController.forgotPassword)
+  .put(authController.confirmEmail)
+  .post(authController.updatePassword);
+
 export default Router;

@@ -4,4 +4,9 @@ type SendForgotPasswordPinArgsT = {
   username: string;
 };
 
-export type { SendForgotPasswordPinArgsT };
+type SendWelcomeArgsT = {
+  to: string;
+  username: string;
+};
+
+export type { SendForgotPasswordPinArgsT, SendWelcomeArgsT };
