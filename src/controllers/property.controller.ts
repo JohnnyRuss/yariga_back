@@ -20,30 +20,42 @@ export const getPropertyFormSuggestion = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const roomTypes = await RoomType.find()
-    .select("-__v")
-    .sort({ label: 1 })
-    .session(session);
-  const propertyFeatures = await PropertyFeature.find()
-    .select("-__v -icon")
-    .sort({ label: 1 })
-    .session(session);
-  const propertyTypes = await PropertyType.find()
-    .select("-__v")
-    .sort({ label: 1 })
-    .session(session);
-  const propertyStatuses = await PropertyStatus.find()
-    .select("-__v")
-    .session(session);
+  try {
+    const [roomTypes, propertyFeatures, propertyTypes, propertyStatuses] =
+      await Promise.all([
+        await RoomType.find()
+          .select("-__v")
+          .sort({ label: 1 })
+          .session(session),
+        await PropertyFeature.find()
+          .select("-__v -icon")
+          .sort({ label: 1 })
+          .session(session),
+        await PropertyType.find()
+          .select("-__v")
+          .sort({ label: 1 })
+          .session(session),
+        await PropertyStatus.find().select("-__v").session(session),
+      ]);
 
-  await session.commitTransaction();
+    await session.commitTransaction();
+    await session.endSession();
 
-  res.status(200).json({
-    propertyFeatures,
-    propertyTypes,
-    roomTypes,
-    propertyStatuses,
-  });
+    res.status(200).json({
+      propertyFeatures,
+      propertyTypes,
+      roomTypes,
+      propertyStatuses,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    return next(
+      new AppError(
+        500,
+        "Internal Server Error.Can't Get Property Form Suggestion"
+      )
+    );
+  }
 });
 
 export const createProperty = Async(async (req, res, next) => {
@@ -168,14 +180,14 @@ export const updateProperty = Async(async (req, res, next) => {
     }).session(session);
 
     await session.commitTransaction();
+    await session.endSession();
 
     res.status(201).json("Property is created");
   } catch (error) {
-    console.log(error);
     await session.abortTransaction();
-    return next(new AppError(500, "Internal Server Error"));
-  } finally {
-    await session.endSession();
+    return next(
+      new AppError(500, "Internal Server Error.Can't update Property")
+    );
   }
 });
 
@@ -188,13 +200,16 @@ export const deleteProperty = Async(async (req, res, next) => {
 
   try {
     await factory.deleteProperty(propertyId, currUser, next, session);
+
     await session.commitTransaction();
+    await session.endSession();
+
     res.status(204).json("Property is deleted");
   } catch (error) {
     await session.abortTransaction();
-    return next(new AppError(500, "Internal Server Error"));
-  } finally {
-    await session.endSession();
+    return next(
+      new AppError(500, "Internal Server Error, Can't delete Property")
+    );
   }
 });
 
@@ -202,56 +217,62 @@ export const getPropertyFilters = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const roomTypes = await RoomType.find().select("-__v").session(session);
-  const statuses = await PropertyStatus.find().select("-__v").session(session);
-  const propertyFeatures = await PropertyFeature.find()
-    .select("-__v -icon")
-    .session(session);
-  const propertyTypes = await PropertyType.find()
-    .select("-__v")
-    .session(session);
+  try {
+    const [
+      roomTypes,
+      statuses,
+      propertyFeatures,
+      propertyTypes,
+      countries,
+      cities,
+      states,
+    ] = await Promise.all([
+      await RoomType.find().select("-__v").session(session),
+      await PropertyStatus.find().select("-__v").session(session),
+      await PropertyFeature.find().select("-__v -icon").session(session),
+      await PropertyType.find().select("-__v").session(session),
+      await Property.find().distinct("location.country").session(session),
+      await Property.find().distinct("location.city").session(session),
+      await Property.find().distinct("location.state").session(session),
+    ]);
 
-  const countries = await Property.find()
-    .distinct("location.country")
-    .session(session);
-  const cities = await Property.find()
-    .distinct("location.city")
-    .session(session);
-  const states = await Property.find()
-    .distinct("location.state")
-    .session(session);
+    const sort = [
+      {
+        label: "Price (Asc)",
+        value: "price",
+      },
+      {
+        label: "Price (Desc)",
+        value: "-price",
+      },
+      {
+        label: "Publish Date (Asc)",
+        value: "createdAt",
+      },
+      {
+        label: "Publish Date (Desc)",
+        value: "-createdAt",
+      },
+    ];
 
-  const sort = [
-    {
-      label: "Price (Asc)",
-      value: "price",
-    },
-    {
-      label: "Price (Desc)",
-      value: "-price",
-    },
-    {
-      label: "Publish Date (Asc)",
-      value: "createdAt",
-    },
-    {
-      label: "Publish Date (Desc)",
-      value: "-createdAt",
-    },
-  ];
+    await session.commitTransaction();
 
-  await session.commitTransaction();
-
-  res.status(200).json({
-    statuses,
-    propertyTypes,
-    roomTypes,
-    propertyFeatures,
-    countries,
-    cities,
-    states,
-    sort,
-  });
+    res.status(200).json({
+      statuses,
+      propertyTypes,
+      roomTypes,
+      propertyFeatures,
+      countries,
+      cities,
+      states,
+      sort,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    return next(
+      new AppError(500, "Internal Server Error, Can't get Property Filers")
+    );
+  }
 });
 
 export const getAllProperties = Async(async (req, res, next) => {

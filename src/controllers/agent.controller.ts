@@ -41,31 +41,38 @@ export const hireAgent = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const agent = await Agent.findByIdAndUpdate(
-    agentId,
-    {
-      $push: { listing: propertyId },
-    },
-    { new: true }
-  )
-    .select("username email phone location listing avatar")
-    .populate({ path: "listing", select: "propertyStatus" })
-    .session(session);
+  try {
+    const agent = await Agent.findByIdAndUpdate(
+      agentId,
+      {
+        $push: { listing: propertyId },
+      },
+      { new: true }
+    )
+      .select("username email phone location listing avatar")
+      .populate({ path: "listing", select: "propertyStatus" })
+      .session(session);
 
-  const property = await Property.findByIdAndUpdate(
-    propertyId,
-    {
-      $set: { agent: agentId },
-    },
-    { new: true }
-  ).session(session);
+    const property = await Property.findByIdAndUpdate(
+      propertyId,
+      {
+        $set: { agent: agentId },
+      },
+      { new: true }
+    ).session(session);
 
-  if (!agent || !property)
-    return next(new AppError(404, "Agent or Property does not exists"));
+    if (!agent || !property)
+      return next(new AppError(404, "Agent or Property does not exists"));
 
-  await session.commitTransaction();
+    await session.commitTransaction();
+    await session.endSession();
 
-  res.status(201).json(agent);
+    res.status(201).json(agent);
+  } catch (error) {
+    await session.abortTransaction();
+
+    return next(new AppError(500, "Internal server error. Can't hire Agent"));
+  }
 });
 
 export const fireAgent = Async(async (req, res, next) => {
@@ -74,31 +81,40 @@ export const fireAgent = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const agent = await Agent.findByIdAndUpdate(
-    agentId,
-    {
-      $pull: { listing: propertyId },
-    },
-    { new: true }
-  )
-    .select("username email phone location listing avatar")
-    .populate({ path: "listing", select: "propertyStatus" })
-    .session(session);
+  try {
+    const agent = await Agent.findByIdAndUpdate(
+      agentId,
+      {
+        $pull: { listing: propertyId },
+      },
+      { new: true }
+    )
+      .select("username email phone location listing avatar")
+      .populate({ path: "listing", select: "propertyStatus" })
+      .session(session);
 
-  const property = await Property.findByIdAndUpdate(
-    propertyId,
-    {
-      $unset: { agent: null },
-    },
-    { new: true }
-  ).session(session);
+    const property = await Property.findByIdAndUpdate(
+      propertyId,
+      {
+        $unset: { agent: null },
+      },
+      { new: true }
+    ).session(session);
 
-  if (!agent || !property)
-    return next(new AppError(404, "Agent or Property does not exists"));
+    if (!agent || !property)
+      return next(new AppError(404, "Agent or Property does not exists"));
 
-  await session.commitTransaction();
+    await session.commitTransaction();
+    await session.endSession();
 
-  res.status(201).json(agent);
+    res.status(201).json(agent);
+  } catch (error) {
+    await session.abortTransaction();
+
+    return next(
+      new AppError(500, "Internal server error. Can't mark fire Agent")
+    );
+  }
 });
 
 export const getAgentProperties = Async(async (req, res, next) => {

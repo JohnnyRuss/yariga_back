@@ -1,7 +1,9 @@
-import mongoose from "mongoose";
+import mongoose, { Types as MongooseTypes } from "mongoose";
 import { Async, AppError } from "../lib";
-import { Conversation, Message, User } from "../models";
+import { Conversation, Message, User, OnlineUser } from "../models";
 import * as factory from "./handler.factory";
+import { io_keys } from "../config/config";
+import { Request } from "express";
 
 export const createConversation = Async(async (req, res, next) => {
   const { adressat } = req.body;
@@ -83,15 +85,16 @@ export const deleteConversation = Async(async (req, res, next) => {
 
   try {
     await factory.deleteConversation(conversationId, currUser, next, session);
+
     await session.commitTransaction();
+    await session.endSession();
+
     res.status(200).json({ conversationId });
   } catch (error) {
     await session.abortTransaction();
     return next(
       new AppError(500, "Internal server error. Can't delete conversation")
     );
-  } finally {
-    await session.endSession();
   }
 });
 
@@ -116,6 +119,20 @@ export const getConversation = Async(async (req, res, next) => {
   if (!conversation.isReadBy.includes(currUser._id)) {
     conversation.isReadBy.push(currUser._id);
     await conversation.save();
+
+    const onlineUser = await getOnlineAdressat(
+      req,
+      conversation.participants.map((p) => p._id)
+    );
+
+    if (onlineUser) {
+      const socket = req.app.get("socket");
+
+      socket.to(onlineUser.socketId).emit(io_keys.read_message, {
+        conversationId: conversation._id,
+        isReadBy: conversation.isReadBy,
+      });
+    }
   }
 
   const messages = await Message.find({
@@ -193,8 +210,6 @@ export const sendMessage = Async(async (req, res, next) => {
 
     await message.save({ session });
 
-    await session.commitTransaction();
-
     const newMessage = {
       sender: message.sender,
       text: message.text,
@@ -212,6 +227,20 @@ export const sendMessage = Async(async (req, res, next) => {
       updatedAt: conversation.updatedAt,
     };
 
+    const onlineUser = await getOnlineAdressat(req, conversation.participants);
+
+    if (onlineUser) {
+      const socket = req.app.get("socket");
+
+      socket.to(onlineUser.socketId).emit(io_keys.new_message, {
+        message: newMessage,
+        conversation: updatedConversation,
+      });
+    }
+
+    await session.commitTransaction();
+    await session.endSession();
+
     res.status(201).json({
       message: newMessage,
       conversation: updatedConversation,
@@ -219,8 +248,6 @@ export const sendMessage = Async(async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     return next(new AppError(500, "Internal server error.Can't send message"));
-  } finally {
-    await session.endSession();
   }
 });
 
@@ -254,13 +281,26 @@ export const markConversationAsRead = Async(async (req, res, next) => {
     if (!currUserIsParticipant)
       return next(new AppError(403, "You are not allowed for this operation"));
 
+    const onlineUser = await getOnlineAdressat(req, conversation.participants);
+
+    if (onlineUser) {
+      const socket = req.app.get("socket");
+
+      socket.to(onlineUser.socketId).emit(io_keys.read_message, {
+        conversationId: conversation._id,
+        isReadBy: conversation.isReadBy,
+      });
+    }
+
     await session.commitTransaction();
+    await session.endSession();
 
     res.status(201).json({
       conversationId: conversation._id,
       isReadBy: conversation.isReadBy,
     });
   } catch (error) {
+    console.log(error);
     await session.abortTransaction();
 
     return next(
@@ -269,8 +309,6 @@ export const markConversationAsRead = Async(async (req, res, next) => {
         "Internal server error. Can't mark conversation as read"
       )
     );
-  } finally {
-    await session.endSession();
   }
 });
 
@@ -296,12 +334,28 @@ export const getConversationAssets = Async(async (req, res, next) => {
     conversationAssets.links = [...conversationAssets.links, ...message.links];
   });
 
-  res.status(201).json(conversationAssets);
+  res.status(200).json(conversationAssets);
 });
 
 export const deleteMessage = Async(async (req, res, next) => {
   const { conversationId } = req.params;
   const currUser = req.user;
 
-  res.status(201).json();
+  res.status(204).json();
 });
+
+// ____________________  UTILS
+async function getOnlineAdressat(
+  req: Request,
+  participants: Array<MongooseTypes.ObjectId>
+) {
+  const currUser = req.user;
+
+  const adressatId = participants
+    .filter((participant) => participant.toString() !== currUser._id)
+    .toString();
+
+  const onlineUser = await OnlineUser.findOne({ userId: adressatId });
+
+  return onlineUser;
+}

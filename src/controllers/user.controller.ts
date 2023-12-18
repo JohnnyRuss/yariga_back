@@ -182,12 +182,11 @@ export const deleteUser = Async(async (req, res, next) => {
     await Email.sendDeleteAccount({ to: user.email, username: user.username });
 
     await session.commitTransaction();
+    await session.endSession();
 
     res.status(204).json("user is deleted");
   } catch (error) {
     await session.abortTransaction();
     return next(new AppError(400, "Failed to delete user"));
-  } finally {
-    await session.endSession();
   }
 });

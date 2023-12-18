@@ -6,4 +6,6 @@ export const io_keys = {
   disconnect: "disconnect",
   user_connection: "user_connection",
   user_disconnection: "user_disconnection",
+  new_message: "new_message",
+  read_message: "read_message",
 };
