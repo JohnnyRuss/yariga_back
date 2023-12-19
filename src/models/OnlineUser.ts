@@ -27,6 +27,10 @@ const OnlineUserSchema = new Schema<OnlineUserT, OnlineUserModelT>({
   },
 });
 
+OnlineUserSchema.index({ userId: 1 });
+
+OnlineUserSchema.index({ socketId: 1 });
+
 const OnlineUser = model<OnlineUserT, OnlineUserModelT>(
   "OnlineUser",
   OnlineUserSchema

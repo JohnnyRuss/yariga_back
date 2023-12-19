@@ -22,8 +22,11 @@ const ConversationSchema = new Schema<
   { timestamps: true }
 );
 
+ConversationSchema.index({ participants: 1 });
+
 const Conversation = model<ConversationT, ConversationModelT>(
   "Conversation",
   ConversationSchema
 );
+
 export default Conversation;

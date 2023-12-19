@@ -123,6 +123,8 @@ const PropertySchema = new Schema<PropertyT, PropertyModelT, PropertyMethodsT>(
   { timestamps: true }
 );
 
+PropertySchema.index({ owner: 1 });
+
 PropertySchema.methods.updateAvgRating = async function () {
   const reviews = await mongoose.model("Review").find({ property: this._id });
 

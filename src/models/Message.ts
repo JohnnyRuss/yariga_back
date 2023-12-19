@@ -31,5 +31,7 @@ const MessageSchema = new Schema<MessageT, MessageModelT, MessageMethodsT>(
   { timestamps: true }
 );
 
+MessageSchema.index({ conversation: 1 });
+
 const Message = model<MessageT, MessageModelT>("Message", MessageSchema);
 export default Message;

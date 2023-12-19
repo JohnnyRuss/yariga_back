@@ -195,14 +195,17 @@ export const sendMessage = Async(async (req, res, next) => {
       {
         $set: { isDeletedBy: [], isReadBy: [], lastMessage: message._id },
       },
-      { new: true }
-    ).session(session);
+      { new: true, session }
+    ).populate({
+      path: "participants",
+      select: "_id username email avatar role",
+    });
 
     if (!conversation)
       return next(new AppError(404, "Conversation user does not exists"));
 
     const currUserIsParticipant = conversation.participants.some(
-      (user) => user.toString() === currUser._id
+      (user) => user._id.toString() === currUser._id
     );
 
     if (!currUserIsParticipant)
@@ -211,12 +214,12 @@ export const sendMessage = Async(async (req, res, next) => {
     await message.save({ session });
 
     const newMessage = {
-      sender: message.sender,
+      _id: message._id,
       text: message.text,
       links: message.links,
       files: message.files,
       media: message.media,
-      _id: message._id,
+      sender: message.sender,
       createdAt: message.createdAt,
     };
 
@@ -227,14 +230,21 @@ export const sendMessage = Async(async (req, res, next) => {
       updatedAt: conversation.updatedAt,
     };
 
-    const onlineUser = await getOnlineAdressat(req, conversation.participants);
+    const onlineUser = await getOnlineAdressat(
+      req,
+      conversation.participants.map((p) => p._id)
+    );
 
     if (onlineUser) {
       const socket = req.app.get("socket");
 
       socket.to(onlineUser.socketId).emit(io_keys.new_message, {
         message: newMessage,
-        conversation: updatedConversation,
+        conversation: {
+          ...updatedConversation,
+          createdAt: conversation.createdAt,
+          participants: conversation.participants,
+        },
       });
     }
 
