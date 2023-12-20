@@ -1,5 +1,5 @@
 import mongoose, { Types as MongooseTypes } from "mongoose";
-import { Async, AppError } from "../lib";
+import { Async, AppError, API_Features } from "../lib";
 import { Conversation, Message, User, OnlineUser } from "../models";
 import * as factory from "./handler.factory";
 import { io_keys } from "../config/config";
@@ -143,6 +143,21 @@ export const getConversation = Async(async (req, res, next) => {
     .populate({ path: "sender", select: "_id username email avatar role" });
 
   res.status(200).json({ ...conversation.toObject(), messages });
+});
+
+export const getConversationMessages = Async(async (req, res, next) => {
+  const { conversationId } = req.params;
+
+  const query = new API_Features(
+    Message.find({ conversation: conversationId }),
+    req.query as { [key: string]: string }
+  );
+
+  const messages = await query.paginate(10).getQuery();
+  // const count = await query.countDocuments();
+  const all = await query.dbQueryClone.countDocuments();
+
+  res.status(200).json({ messages, count: 0, all });
 });
 
 export const getAllConversations = Async(async (req, res, next) => {

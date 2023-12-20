@@ -19,7 +19,8 @@ Router.route("/:conversationId/assets").get(
 
 Router.route("/:conversationId/message")
   .post(checkAuth, chatController.sendMessage)
-  .delete(checkAuth, chatController.deleteMessage);
+  .delete(checkAuth, chatController.deleteMessage)
+  .get(checkAuth, chatController.getConversationMessages);
 
 Router.route("/:conversationId/read").patch(
   checkAuth,

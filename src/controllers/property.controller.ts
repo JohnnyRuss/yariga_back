@@ -10,7 +10,7 @@ import {
 import multer from "multer";
 import * as factory from "./handler.factory";
 import { Async, AppError, API_FeatureUtils, Cloudinary } from "../lib";
-import mongoose, { isValidObjectId, Types as MongooseTypes } from "mongoose";
+import mongoose from "mongoose";
 
 export const fileUpload = multer({
   storage: multer.memoryStorage(),
@@ -618,8 +618,8 @@ export const getProperty = Async(async (req, res, next) => {
       match: { approved: true },
       select: "-__v",
       populate: [
-        { path: "user", select: "username avatar createdAt" },
-        { path: "property", select: "title propertyStatus price" },
+        { path: "user", select: "username avatar createdAt role" },
+        { path: "property", select: "title propertyStatus price images" },
       ],
     });
 

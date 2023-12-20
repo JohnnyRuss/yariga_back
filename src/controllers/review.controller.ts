@@ -70,8 +70,11 @@ export const getOwnerReviews = Async(async (req, res, next) => {
   const reviews = await reviewsQuery
     .paginate()
     .getQuery()
-    .populate({ path: "user", select: "avatar createdAt username" })
-    .populate({ path: "property", select: "title propertyStatus price" });
+    .populate({ path: "user", select: "avatar createdAt username role" })
+    .populate({
+      path: "property",
+      select: "title propertyStatus price images",
+    });
 
   const pagesCount = await reviewsQuery.countDocuments();
 
