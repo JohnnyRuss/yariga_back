@@ -153,11 +153,18 @@ export const getConversationMessages = Async(async (req, res, next) => {
     req.query as { [key: string]: string }
   );
 
-  const messages = await query.paginate(10).getQuery();
-  // const count = await query.countDocuments();
-  const all = await query.dbQueryClone.countDocuments();
+  const count = await query.countDocuments();
+  const currentPage = +(req.query.page as string);
+  const hasMore = +(req.query.page as string) < count;
 
-  res.status(200).json({ messages, count: 0, all });
+  const messages = await query
+    .paginate()
+    .getQuery()
+    .select("-isDeletedBy -__v -updatedAt")
+    .sort("-createdAt")
+    .populate({ path: "sender", select: "_id username email avatar role" });
+
+  res.status(200).json({ messages, hasMore, currentPage });
 });
 
 export const getAllConversations = Async(async (req, res, next) => {
