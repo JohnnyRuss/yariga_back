@@ -36,7 +36,7 @@ export const createConversation = Async(async (req, res, next) => {
     await conversation.populate([
       {
         path: "participants",
-        select: "_id username email avatar role",
+        select: "_id username email avatar role isOnline",
       },
     ]);
 
@@ -45,7 +45,10 @@ export const createConversation = Async(async (req, res, next) => {
       isDeletedBy: { $nin: currUser._id },
     })
       .select("-__v -isDeletedBy -updatedAt -conversation")
-      .populate({ path: "sender", select: "_id username email avatar role" });
+      .populate({
+        path: "sender",
+        select: "_id username email avatar role isOnline",
+      });
 
     res.status(200).json({
       _id: conversation._id,
@@ -62,7 +65,7 @@ export const createConversation = Async(async (req, res, next) => {
 
     conversation.populate({
       path: "participants",
-      select: "_id username email avatar role",
+      select: "_id username email avatar role isOnline",
     });
 
     await conversation.save();
@@ -110,7 +113,7 @@ export const getConversation = Async(async (req, res, next) => {
     .select("-isDeletedBy -__v -lastMessage")
     .populate({
       path: "participants",
-      select: "_id username email avatar role",
+      select: "_id username email avatar role isOnline",
     });
 
   if (!conversation)
@@ -135,59 +138,68 @@ export const getConversation = Async(async (req, res, next) => {
     }
   }
 
-  const messages = await Message.find({
-    conversation: conversation._id,
-    isDeletedBy: { $nin: currUser._id },
-  })
-    .select("-__v -isDeletedBy -updatedAt -conversation")
-    .populate({ path: "sender", select: "_id username email avatar role" });
-
-  res.status(200).json({ ...conversation.toObject(), messages });
+  res.status(200).json(conversation);
 });
 
 export const getConversationMessages = Async(async (req, res, next) => {
   const { conversationId } = req.params;
+  const currUser = req.user;
 
   const query = new API_Features(
-    Message.find({ conversation: conversationId }),
+    Message.find({
+      conversation: conversationId,
+      isDeletedBy: { $nin: currUser._id },
+    }),
     req.query as { [key: string]: string }
   );
 
-  const count = await query.countDocuments();
-  const currentPage = +(req.query.page as string);
-  const hasMore = +(req.query.page as string) < count;
+  const pageCount = await query.countDocuments();
+  const hasMore = +(req.query.page as string) < pageCount;
 
   const messages = await query
+    .sort({ createdAt: -1 })
     .paginate()
     .getQuery()
-    .select("-isDeletedBy -__v -updatedAt")
-    .sort("-createdAt")
+    .select("-isDeletedBy -__v -updatedAt -conversation")
     .populate({ path: "sender", select: "_id username email avatar role" });
 
-  res.status(200).json({ messages, hasMore, currentPage });
+  res.status(200).json({ messages, hasMore });
 });
 
 export const getAllConversations = Async(async (req, res, next) => {
   const currUser = req.user;
 
-  const conversations = await Conversation.find({
-    isDeletedBy: { $nin: currUser._id },
-    participants: { $in: currUser._id },
-  })
-    .select("-isDeletedBy -__v -createdAt")
+  const query = new API_Features(
+    Conversation.find({
+      isDeletedBy: { $nin: currUser._id },
+      participants: { $in: currUser._id },
+    }),
+    req.query as { [key: string]: string }
+  );
+
+  const pageCount = await query.countDocuments();
+  const hasMore = +(req.query.page as string) < pageCount;
+
+  const conversations = await query
     .sort({ updatedAt: -1 })
+    .paginate()
+    .getQuery()
+    .select("-isDeletedBy -__v -createdAt")
     .populate({
       path: "participants",
-      select: "_id username email avatar role",
+      select: "_id username email avatar role isOnline",
     })
     .populate({
       path: "lastMessage",
       select: "-__v -isDeletedBy -updatedAt -conversation",
       match: { isDeletedBy: { $nin: currUser._id } },
-      populate: { path: "sender", select: "_id username email avatar role" },
+      populate: {
+        path: "sender",
+        select: "_id username email avatar role isOnline",
+      },
     });
 
-  res.status(200).json(conversations);
+  res.status(200).json({ conversations, hasMore });
 });
 
 export const sendMessage = Async(async (req, res, next) => {
@@ -215,12 +227,16 @@ export const sendMessage = Async(async (req, res, next) => {
     const conversation = await Conversation.findByIdAndUpdate(
       conversationId,
       {
-        $set: { isDeletedBy: [], isReadBy: [], lastMessage: message._id },
+        $set: {
+          isDeletedBy: [],
+          isReadBy: [currUser._id],
+          lastMessage: message._id,
+        },
       },
       { new: true, session }
     ).populate({
       path: "participants",
-      select: "_id username email avatar role",
+      select: "_id username email avatar role isOnline",
     });
 
     if (!conversation)
@@ -246,7 +262,7 @@ export const sendMessage = Async(async (req, res, next) => {
     };
 
     const updatedConversation = {
-      isReadBy: [],
+      isReadBy: conversation.isReadBy,
       lastMessage: message,
       _id: conversation._id,
       updatedAt: conversation.updatedAt,
@@ -291,8 +307,10 @@ export const markConversationAsRead = Async(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  const isRead = read === "1";
+
   const queryObject: { [key: string]: { [key: string]: string } } = {};
-  read === "1"
+  isRead
     ? (queryObject["$addToSet"] = { isReadBy: currUser._id })
     : (queryObject["$pull"] = { isReadBy: currUser._id });
 
@@ -318,10 +336,15 @@ export const markConversationAsRead = Async(async (req, res, next) => {
     if (onlineUser) {
       const socket = req.app.get("socket");
 
-      socket.to(onlineUser.socketId).emit(io_keys.read_message, {
-        conversationId: conversation._id,
-        isReadBy: conversation.isReadBy,
-      });
+      isRead
+        ? socket.to(onlineUser.socketId).emit(io_keys.read_message, {
+            conversationId: conversation._id,
+            isReadBy: conversation.isReadBy,
+          })
+        : socket.to(onlineUser.socketId).emit(io_keys.unread_message, {
+            conversationId: conversation._id,
+            isReadBy: conversation.isReadBy,
+          });
     }
 
     await session.commitTransaction();
@@ -342,6 +365,70 @@ export const markConversationAsRead = Async(async (req, res, next) => {
       )
     );
   }
+});
+
+export const getUnreadConversations = Async(async (req, res, next) => {
+  const currUser = req.user;
+
+  const unreadConversations = await Conversation.aggregate([
+    {
+      $match: {
+        $and: [
+          { isDeletedBy: { $nin: [currUser._id] } },
+          { participants: { $in: [new MongooseTypes.ObjectId(currUser._id)] } },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        as: "lastMessage",
+        from: "messages",
+        foreignField: "_id",
+        localField: "lastMessage",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              sender: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        lastMessage: 1,
+        isReadBy: 1,
+      },
+    },
+    {
+      $unwind: "$lastMessage",
+    },
+    {
+      $match: {
+        $and: [
+          {
+            "lastMessage.sender": {
+              $ne: new MongooseTypes.ObjectId(currUser._id),
+            },
+          },
+          {
+            isReadBy: { $nin: [currUser._id] },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+      },
+    },
+  ]);
+
+  const ids = unreadConversations.map((c) => c._id.toString());
+
+  res.status(200).json(ids);
 });
 
 export const getConversationAssets = Async(async (req, res, next) => {

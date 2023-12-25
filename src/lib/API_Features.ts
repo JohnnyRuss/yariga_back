@@ -55,10 +55,8 @@ class API_Features<
     return count;
   }
 
-  sort() {
-    this.dbQuery = this.dbQuery.sort(
-      this.query.sort ? (this.query.sort as string) : "-createdAt"
-    );
+  sort(sort: { [key: string]: 1 | -1 }) {
+    this.dbQuery = this.dbQuery.sort(sort);
 
     return this;
   }

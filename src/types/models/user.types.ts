@@ -24,6 +24,7 @@ export interface UserT extends Document {
   passwordResetToken: string;
   passwordResetAt: string;
   properties: [MongooseTypes.ObjectId];
+  isOnline?: boolean;
 }
 
 export interface UserMethodsT {

@@ -79,6 +79,11 @@ const UserSchema = new Schema<UserT, UserModelT, UserMethodsT>(
       enum: ["AGENT", "USER"],
       default: "USER",
     },
+
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

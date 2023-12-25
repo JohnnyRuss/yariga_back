@@ -8,4 +8,5 @@ export const io_keys = {
   user_disconnection: "user_disconnection",
   new_message: "new_message",
   read_message: "read_message",
+  unread_message: "unread_message",
 };

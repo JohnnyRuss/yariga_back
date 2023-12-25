@@ -14,8 +14,9 @@ import propertyRoutes from "./routes/property.routes";
 import userRoutes from "./routes/user.routes";
 import agentRoutes from "./routes/agent.routes";
 import reviewsRoutes from "./routes/review.routes";
-import chatRoutes from "./routes/chatRoutes";
+import chatRoutes from "./routes/chat.routes";
 import utilsRoutes from "./routes/utils.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 
 const App = express();
 
@@ -40,6 +41,7 @@ App.use("/api/v1/agents", agentRoutes);
 App.use("/api/v1/reviews", reviewsRoutes);
 App.use("/api/v1/chat", chatRoutes);
 App.use("/api/v1/utils", utilsRoutes);
+App.use("/api/v1/dashboard", dashboardRoutes);
 
 App.get("/views", async (req, res, next) => {
   res.status(200).render("welcome", {

@@ -8,6 +8,8 @@ Router.route("/")
   .post(checkAuth, chatController.createConversation)
   .get(checkAuth, chatController.getAllConversations);
 
+Router.route("/unread").get(checkAuth, chatController.getUnreadConversations);
+
 Router.route("/:conversationId")
   .delete(checkAuth, chatController.deleteConversation)
   .get(checkAuth, chatController.getConversation);
