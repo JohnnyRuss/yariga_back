@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "engines": {
-    "node": "18.x"
+    "node": ">=14 <=18"
   },
   "scripts": {
     "compile": "tsc -p .",
@@ -13,7 +13,6 @@
     "build": "npm run compile && npm run copy-views",
     "watch": "nodemon --exec ts-node --files ./src/server.ts",
     "start:dev": "concurrently \"npm:watch\" \"npm:compile\"",
-    "postinstall": "npm install --build-from-source"
   },
   "keywords": [],
   "author": "",
