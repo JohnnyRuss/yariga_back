@@ -46,6 +46,7 @@ export const getDashboard = Async(async (req, res, next) => {
         },
       },
     ]),
+
     // USERS RANGE
     await User.aggregate([
       {
@@ -107,6 +108,7 @@ export const getDashboard = Async(async (req, res, next) => {
         },
       },
     ]),
+
     // PROPERTY MIN/MAX PRICES
     await Property.aggregate([
       {
@@ -123,6 +125,7 @@ export const getDashboard = Async(async (req, res, next) => {
         },
       },
     ]),
+
     // PROPERTY STATISTICS
     await Property.aggregate([
       {
