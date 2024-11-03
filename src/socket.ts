@@ -54,8 +54,10 @@ io.on(io_keys.connection, (socket) => {
   );
 
   socket.on(io_keys.disconnect, async () => {
-    const user = await OnlineUser.findOneAndDelete({ socketId: socket.id });
+    const user = await OnlineUser.findOne({ socketId: socket.id });
+
     await User.findByIdAndUpdate(user?.userId, { isOnline: false });
+    await user?.deleteOne();
 
     if (user?.userId)
       eventQueue.push({
