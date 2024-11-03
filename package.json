@@ -12,7 +12,7 @@
     "copy-views": "copyfiles -u 1 ./src/views/**/* ./build",
     "build": "npm run compile && npm run copy-views",
     "watch": "nodemon --exec ts-node --files ./src/server.ts",
-    "start:dev": "concurrently \"npm:watch\" \"npm:compile\"",
+    "start:dev": "concurrently \"npm:watch\" \"npm:compile\""
   },
   "keywords": [],
   "author": "",
