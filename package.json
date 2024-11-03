@@ -4,13 +4,13 @@
   "description": "",
   "main": "index.js",
   "engines": {
-    "node": "22.10.0"
+    "node": "18.x"
   },
   "scripts": {
     "compile": "tsc -p .",
     "start": "node ./build/server.js",
     "copy-views": "copyfiles -u 1 ./src/views/**/* ./build",
-    "build": "npm run compile && npm run copy-views",
+    "build": "npm run compile && npm run copy-views && npm install --build-from-source",
     "watch": "nodemon --exec ts-node --files ./src/server.ts",
     "start:dev": "concurrently \"npm:watch\" \"npm:compile\""
   },
