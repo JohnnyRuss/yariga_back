@@ -59,7 +59,6 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "pug": "^3.0.2",
-    "puppeteer": "^21.5.2",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.1"
   }
