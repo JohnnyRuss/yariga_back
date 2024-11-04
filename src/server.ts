@@ -46,3 +46,4 @@ mongoose
 // "engines": {
 //   "node": ">=14 <=18"
 // },
+// PYTHON / usr / bin / python3;

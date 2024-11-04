@@ -12,8 +12,11 @@ import metascraperUrl from "metascraper-url";
 
 import getHTML from "html-get";
 import browserless from "browserless";
+import puppeteer from "puppeteer";
 
-const browser = browserless();
+const browser = browserless({
+  getBrowser: () => puppeteer.launch({ args: ["--no-sandbox"] }),
+});
 
 const scraper = metascraper([
   metascraperAuthor(),

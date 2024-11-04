@@ -15,7 +15,7 @@ exports.io = new socket_io_1.Server(SERVER, {
     cors: { credentials: true, origin: env_1.APP_ORIGINS },
 });
 app_1.default.set("socket", exports.io);
-require("./socket.ts");
+require("./socket");
 process.on("uncaughtException", (error) => {
     console.log("Ocurred Uncaught Exception Error, Process is Exited with StatusCode - 1 ❌ 👉🏻", error);
     process.exit(1);
@@ -37,3 +37,6 @@ mongoose_1.default
         });
     });
 });
+// "engines": {
+//   "node": ">=14 <=18"
+// },
