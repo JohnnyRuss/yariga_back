@@ -15,7 +15,8 @@ import browserless from "browserless";
 import puppeteer from "puppeteer";
 
 const browser = browserless({
-  getBrowser: () => puppeteer.launch({ args: ["--no-sandbox"] }),
+  getBrowser: () =>
+    puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }),
 });
 
 const scraper = metascraper([
