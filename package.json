@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "engines": {
-    "node": ">=14 <=18"
-  },
   "scripts": {
     "compile": "tsc -p .",
     "start": "node ./build/server.js",
@@ -61,7 +58,6 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "pug": "^3.0.2",
-    "sharp": "^0.33.5",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.1"
   }
