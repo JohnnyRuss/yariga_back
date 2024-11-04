@@ -14,11 +14,6 @@ import getHTML from "html-get";
 import browserless from "browserless";
 import puppeteer from "puppeteer";
 
-const browser = browserless({
-  getBrowser: () =>
-    puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }),
-});
-
 const scraper = metascraper([
   metascraperAuthor(),
   metascraperImage(),
@@ -30,10 +25,17 @@ const scraper = metascraper([
   metascraperUrl(),
 ]);
 
+const getBrowser = async () => {
+  return browserless({
+    getBrowser: () =>
+      puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }),
+  });
+};
+
 export const getMeta = Async(async (req, res, next) => {
   const { url } = req.body;
-
   const getContent = async () => {
+    const browser = await getBrowser();
     // create a browser context inside the main Chromium process
     const context = browser.createContext();
     const promise = getHTML(url, { getBrowserless: () => context });
@@ -62,6 +64,7 @@ export const getMultipleMeta = Async(async (req, res, next) => {
   const allMeta = await Promise.all(
     urls.map(async (url) => {
       const getContent = async () => {
+        const browser = await getBrowser();
         // create a browser context inside the main Chromium process
         const context = browser.createContext();
         const promise = getHTML(url, { getBrowserless: () => context });

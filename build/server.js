@@ -40,3 +40,4 @@ mongoose_1.default
 // "engines": {
 //   "node": ">=14 <=18"
 // },
+// PYTHON / usr / bin / python3;
