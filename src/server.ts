@@ -13,7 +13,7 @@ export const io = new IOServer(SERVER, {
 });
 
 App.set("socket", io);
-require("./socket.ts");
+require("./socket");
 
 process.on("uncaughtException", (error) => {
   console.log(
