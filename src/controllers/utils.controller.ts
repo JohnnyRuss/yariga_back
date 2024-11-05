@@ -13,7 +13,7 @@ async function scrapeMetadata(url: string) {
     const image = getImageFromCheerio($);
     const publisher = getPublisherFromUrl(url);
 
-    return { title, description, image, publisher };
+    return { title, description, image, publisher, url };
   } catch (error) {
     console.error("Error scraping metadata:", error);
   }
