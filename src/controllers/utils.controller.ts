@@ -1,58 +1,28 @@
 import { AppError, Async } from "../lib";
+import axios from "axios";
+const cheerio = require("cheerio");
 
-import metascraper from "metascraper";
-import metascraperAuthor from "metascraper-author";
-import metascraperImage from "metascraper-image";
-import metascraperTitle from "metascraper-title";
-import metascraperDate from "metascraper-date";
-import metascraperDescription from "metascraper-description";
-import metascraperLogo from "metascraper-logo";
-import metascraperPublisher from "metascraper-publisher";
-import metascraperUrl from "metascraper-url";
+async function scrapeMetadata(url: string) {
+  try {
+    const { data } = await axios.get(url);
 
-import getHTML from "html-get";
-import browserless from "browserless";
-import puppeteer, { Browser } from "puppeteer";
+    const $ = cheerio.load(data);
 
-const scraper = metascraper([
-  metascraperAuthor(),
-  metascraperImage(),
-  metascraperTitle(),
-  metascraperDate(),
-  metascraperDescription(),
-  metascraperLogo(),
-  metascraperPublisher(),
-  metascraperUrl(),
-]);
+    const title = $("head title").text();
+    const description = $('meta[name="description"]').attr("content");
+    const image = getImageFromCheerio($);
+    const publisher = getPublisherFromUrl(url);
 
-const getBrowser = async (): Promise<typeof browserless> => {
-  const browser = async () =>
-    await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-  return browserless({ getBrowser: browser });
-};
+    return { title, description, image, publisher };
+  } catch (error) {
+    console.error("Error scraping metadata:", error);
+  }
+}
 
 export const getMeta = Async(async (req, res, next) => {
   const { url } = req.body;
-  const getContent = async () => {
-    const browser = await getBrowser();
-    // create a browser context inside the main Chromium process
-    const context = browser.createContext();
-    const promise = getHTML(url, { getBrowserless: () => context });
-    // close browser resources before return the result
-    promise
-      .then(() => context)
-      .then((browser: any) => browser.destroyContext());
-
-    return promise;
-  };
-
-  const content = await getContent();
-  const sc = await scraper(content);
-
-  res.status(200).json(sc);
+  const data = await scrapeMetadata(url);
+  res.status(200).json(data);
 });
 
 export const getMultipleMeta = Async(async (req, res, next) => {
@@ -64,24 +34,46 @@ export const getMultipleMeta = Async(async (req, res, next) => {
     return next(new AppError(400, "please provide us urls"));
 
   const allMeta = await Promise.all(
-    urls.map(async (url) => {
-      const getContent = async () => {
-        const browser = await getBrowser();
-        // create a browser context inside the main Chromium process
-        const context = browser.createContext();
-        const promise = getHTML(url, { getBrowserless: () => context });
-        // close browser resources before return the result
-        promise
-          .then(() => context)
-          .then((browser: any) => browser.destroyContext());
-
-        return promise;
-      };
-
-      const content = await getContent();
-      return await scraper(content);
-    })
+    urls.map(async (url) => await scrapeMetadata(url))
   );
 
   res.status(200).json(allMeta);
 });
+
+function getPublisherFromUrl(url: string) {
+  const domainRegex = /(?:https?:\/\/)?(?:www\.)?([^\/]+)/i;
+
+  const match = url.match(domainRegex);
+  const fullDomain = match ? match[1] : null;
+  const baseDomain = fullDomain
+    ? fullDomain.split(".").slice(-2).join(".")
+    : null;
+
+  return baseDomain;
+}
+
+function getImageFromCheerio(cheerio: any) {
+  let image =
+    cheerio('meta[property="og:image"]').attr("content") ||
+    cheerio('link[rel="image_src"]').attr("href") ||
+    cheerio('meta[name="twitter:image"]').attr("content") ||
+    cheerio('meta[property="og:image:secure_url"]').attr("content") ||
+    cheerio('meta[itemprop="image"]').attr("content") ||
+    cheerio(".main-image-class").attr("src") ||
+    cheerio("#main-image-id").attr("src");
+
+  if (!image) {
+    const jsonLd = cheerio('script[type="application/ld+json"]').html();
+    if (jsonLd) {
+      const jsonData = JSON.parse(jsonLd);
+      const imageAlternative =
+        jsonData.image ||
+        jsonData.logo ||
+        (jsonData.thumbnailUrl && jsonData.thumbnailUrl[0]);
+
+      image = imageAlternative;
+    }
+  }
+
+  return image;
+}
