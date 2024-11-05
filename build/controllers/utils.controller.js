@@ -28,16 +28,18 @@ const scraper = (0, metascraper_1.default)([
     (0, metascraper_url_1.default)(),
 ]);
 const getBrowser = async () => {
-    return (0, browserless_1.default)({
-        getBrowser: () => puppeteer_1.default.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }),
+    const browser = async () => await puppeteer_1.default.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+    return (0, browserless_1.default)({ getBrowser: browser });
 };
+const browser = getBrowser();
 exports.getMeta = (0, lib_1.Async)(async (req, res, next) => {
     const { url } = req.body;
     const getContent = async () => {
-        const browser = await getBrowser();
+        // const browser = await getBrowser();
         // create a browser context inside the main Chromium process
-        const context = browser.createContext();
+        const context = (await browser).createContext();
         const promise = (0, html_get_1.default)(url, { getBrowserless: () => context });
         // close browser resources before return the result
         promise
@@ -56,9 +58,9 @@ exports.getMultipleMeta = (0, lib_1.Async)(async (req, res, next) => {
         return next(new lib_1.AppError(400, "please provide us urls"));
     const allMeta = await Promise.all(urls.map(async (url) => {
         const getContent = async () => {
-            const browser = await getBrowser();
+            // const browser = await getBrowser();
             // create a browser context inside the main Chromium process
-            const context = browser.createContext();
+            const context = (await browser).createContext();
             const promise = (0, html_get_1.default)(url, { getBrowserless: () => context });
             // close browser resources before return the result
             promise
