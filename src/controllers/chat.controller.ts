@@ -355,7 +355,6 @@ export const markConversationAsRead = Async(async (req, res, next) => {
       isReadBy: conversation.isReadBy,
     });
   } catch (error) {
-    console.log(error);
     await session.abortTransaction();
 
     return next(
