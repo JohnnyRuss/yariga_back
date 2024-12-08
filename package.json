@@ -6,9 +6,10 @@
   "scripts": {
     "compile": "tsc -p .",
     "start": "node ./build/server.js",
-    "copy-views": "copyfiles -u 1 ./src/views/**/* ./build",
-    "build": "npm run compile && npm run copy-views",
     "watch": "nodemon --exec ts-node --files ./src/server.ts",
+    "copy-views": "copyfiles -u 1 ./src/views/**/* ./build",
+    "copy-public": "copyfiles -u 1 ./src/public/**/* ./build",
+    "build": "npm run compile && npm run copy-views && npm run copy-public",
     "start:dev": "concurrently \"npm:watch\" \"npm:compile\""
   },
   "keywords": [],

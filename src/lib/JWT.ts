@@ -2,9 +2,10 @@ import {
   NODE_MODE,
   JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET,
+  APP_ORIGIN,
 } from "../config/env";
 import jwt from "jsonwebtoken";
-import { Response } from "express";
+import { CookieOptions, Response } from "express";
 import { ReqUserT } from "../types";
 import { promisify } from "util";
 
@@ -35,19 +36,15 @@ class JWT {
 
     const refreshToken = jwt.sign(payload, this.refreshSecret);
 
-    const cookieOptions: {
-      httpOnly: boolean;
-      secure: boolean;
-      sameSite?: boolean;
-    } = {
-      httpOnly: true,
-      secure: false,
-    };
+    const removeProtocol = (url: string) => url.replace(/^https?:\/\//, "");
 
-    if (NODE_MODE === "PROD") {
-      cookieOptions.secure = true;
-      cookieOptions.sameSite = true;
-    }
+    const cookieOptions: CookieOptions = {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: NODE_MODE === "PROD",
+      domain: removeProtocol(APP_ORIGIN),
+    };
 
     res.cookie("authorization", refreshToken, cookieOptions);
 
