@@ -17,6 +17,7 @@ import reviewsRoutes from "./routes/review.routes";
 import chatRoutes from "./routes/chat.routes";
 import utilsRoutes from "./routes/utils.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
+import checkHealthRoutes from "./routes/checkHealth.routes";
 
 const App = express();
 
@@ -35,6 +36,7 @@ App.use(compression());
 
 NODE_MODE === "DEV" && App.use(morgan("dev"));
 
+App.use("/api/v1/health", checkHealthRoutes);
 App.use("/api/v1/auth", authRoutes);
 App.use("/api/v1/users", userRoutes);
 App.use("/api/v1/properties", propertyRoutes);

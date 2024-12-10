@@ -178,8 +178,9 @@ export const confirmEmail = Async(async (req, res, next) => {
     httpOnly: true,
     sameSite: "none",
     secure: NODE_MODE === "PROD",
-    domain: removeProtocol(APP_ORIGIN),
   };
+
+  if (NODE_MODE === "PROD") cookieOptions.domain = removeProtocol(APP_ORIGIN);
 
   res.cookie("password_reset_token", passwordResetToken, cookieOptions);
 

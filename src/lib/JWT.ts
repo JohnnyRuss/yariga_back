@@ -43,8 +43,9 @@ class JWT {
       httpOnly: true,
       sameSite: "none",
       secure: NODE_MODE === "PROD",
-      domain: removeProtocol(APP_ORIGIN),
     };
+
+    if (NODE_MODE === "PROD") cookieOptions.domain = removeProtocol(APP_ORIGIN);
 
     res.cookie("authorization", refreshToken, cookieOptions);
 
